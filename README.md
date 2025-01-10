@@ -1,3 +1,3 @@
 # BattleActivity 
-Connor ist der Größte, ebenso wie Florian
+Connor ist der Größte, ebenso wie Florian - passt das?
 # test
