@@ -10,7 +10,7 @@ class LoginScreen extends StatelessWidget {
       body: Center(
         child: ElevatedButton(
           onPressed: () {
-            Navigator.pushNamed(context, '/home'); // Navigation zur Hauptseite
+            Navigator.pushNamed(context, '/archievement'); // Navigation zur Hauptseite
           },
           child: Text('Login'),
         ),

@@ -1,17 +1,17 @@
 import 'package:flutter/material.dart';
 
-class ArchievementScreen extends StatelessWidget {
-  const ArchievementScreen({super.key});
+class ActivityScreen extends StatelessWidget{
+  const ActivityScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Home')),
+      appBar: AppBar(title: Text('Aktivitäten')),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Erfolge'),
+            Text('Deine Aktivitäten'),
             ElevatedButton(
               onPressed: () {
                 Navigator.pushNamed(context, '/profile'); // Navigation zur Profilseite
@@ -20,9 +20,9 @@ class ArchievementScreen extends StatelessWidget {
             ),
             ElevatedButton(
               onPressed: () {
-                Navigator.pushNamed(context, '/activity'); // Navigation zur Profilseite
+                Navigator.pushNamed(context, '/archievement'); // Navigation zur Profilseite
               },
-              child: Text('Aktivitäten'),
+              child: Text('Erfolge'),
             ),
             ElevatedButton(
               onPressed: () {
