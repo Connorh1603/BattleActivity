@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_application_1/screens/activity_detail_screen.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -14,11 +15,11 @@ class _ActivityScreenState extends State<ActivityScreen> {
   final CollectionReference activitiesCollection =
   FirebaseFirestore.instance.collection('activities');
 
-  // Aktivität hinzufügen (öffnet Dialog)
+  // Funktion für Popup (Aktivität hinzufügen)
   void _showAddActivityDialog() {
     TextEditingController nameController = TextEditingController();
     TextEditingController descriptionController = TextEditingController();
-    String selectedCategory = "Lernen";
+    ValueNotifier<String> selectedCategory = ValueNotifier<String>("Lernen");
 
     showDialog(
       context: context,
@@ -37,24 +38,27 @@ class _ActivityScreenState extends State<ActivityScreen> {
                 decoration: const InputDecoration(labelText: "Beschreibung"),
               ),
               const SizedBox(height: 10),
-              DropdownButton<String>(
-                value: selectedCategory,
-                items: ["Lernen", "Fitness", "Entspannung"].map((String category) {
-                  return DropdownMenuItem(
-                    value: category,
-                    child: Row(
-                      children: [
-                        _getCategoryIcon(category),
-                        const SizedBox(width: 10),
-                        Text(category),
-                      ],
-                    ),
+              ValueListenableBuilder<String>(
+                valueListenable: selectedCategory,
+                builder: (context, value, child) {
+                  return DropdownButton<String>(
+                    value: value,
+                    items: ["Lernen", "Fitness", "Entspannung"].map((String category) {
+                      return DropdownMenuItem(
+                        value: category,
+                        child: Row(
+                          children: [
+                            _getCategoryIcon(category),
+                            const SizedBox(width: 10),
+                            Text(category),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (newValue) {
+                      selectedCategory.value = newValue!;
+                    },
                   );
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    selectedCategory = value!;
-                  });
                 },
               ),
             ],
@@ -71,7 +75,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   await activitiesCollection.add({
                     "name": nameController.text,
                     "description": descriptionController.text,
-                    "category": selectedCategory,
+                    "category": selectedCategory.value,
                     "timestamp": FieldValue.serverTimestamp(),
                   });
                   Navigator.pop(context);
@@ -131,37 +135,43 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     var activity = activities[index];
                     var data = activity.data() as Map<String, dynamic>;
 
-                    return AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      transform: isDeleting
-                          ? Matrix4.rotationZ(0.02) // Wackeleffekt
-                          : Matrix4.identity(),
-                      child: ListTile(
-                        title: Text(data["name"]),
-                        subtitle: Text("${data["description"]} • ${data["category"]}"),
-                        leading: _getCategoryIcon(data["category"]),
-                        trailing: isDeleting
-                            ? IconButton(
-                          icon: const Icon(Icons.close, color: Colors.red),
-                          onPressed: () => _deleteActivity(activity.id),
-                        )
-                            : null,
-                        onTap: isDeleting
-                            ? null
-                            : () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ActivityDetailScreen(
-                                activityId: activity.id,
-                                activityName: data["name"],
-                                activityDescription: data["description"],
-                                activityCategory: data["category"],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                    return TweenAnimationBuilder(
+                      tween: isDeleting
+                          ? Tween<double>(begin: -0.05, end: 0.05)
+                          : Tween<double>(begin: 0, end: 0),
+                      duration: const Duration(milliseconds: 150),
+                      curve: Curves.easeInOut,
+                      builder: (context, double angle, child) {
+                        return Transform(
+                          transform: Matrix4.rotationZ(angle),
+                          child: ListTile(
+                            title: Text(data["name"]),
+                            subtitle: Text("${data["description"]} • ${data["category"]}"),
+                            leading: _getCategoryIcon(data["category"]),
+                            trailing: isDeleting
+                                ? IconButton(
+                              icon: const Icon(Icons.close, color: Colors.red),
+                              onPressed: () => _deleteActivity(activity.id),
+                            )
+                                : null,
+                            onTap: isDeleting
+                                ? null
+                                : () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => ActivityDetailScreen(
+                                    activityId: activity.id,
+                                    activityName: data["name"],
+                                    activityDescription: data["description"],
+                                    activityCategory: data["category"],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        );
+                      },
                     );
                   },
                 );
