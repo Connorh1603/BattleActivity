@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
-class ActivityDetailScreen extends StatefulWidget {
+class ActivityDetailScreen extends StatelessWidget {
   final String activityId;
   final String activityName;
   final String activityDescription;
   final String activityCategory;
+  final String activityDuration;
+  final String activityTimestamp;
 
   const ActivityDetailScreen({
     super.key,
@@ -13,93 +14,42 @@ class ActivityDetailScreen extends StatefulWidget {
     required this.activityName,
     required this.activityDescription,
     required this.activityCategory,
+    required this.activityDuration,
+    required this.activityTimestamp,
   });
-
-  @override
-  _ActivityDetailScreenState createState() => _ActivityDetailScreenState();
-}
-
-class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
-  late TextEditingController nameController;
-  late TextEditingController descriptionController;
-  late String selectedCategory;
-
-  @override
-  void initState() {
-    super.initState();
-    nameController = TextEditingController(text: widget.activityName);
-    descriptionController = TextEditingController(text: widget.activityDescription);
-    selectedCategory = widget.activityCategory;
-  }
-
-  void _updateActivity() async {
-    await FirebaseFirestore.instance.collection('activities').doc(widget.activityId).update({
-      "name": nameController.text,
-      "description": descriptionController.text,
-      "category": selectedCategory,
-    });
-
-    Navigator.pop(context);
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.activityName)),
+      appBar: AppBar(title: Text(activityName)),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: "Aktivität"),
-            ),
-            TextField(
-              controller: descriptionController,
-              decoration: const InputDecoration(labelText: "Beschreibung"),
+            Text(
+              activityName,
+              style: Theme.of(context).textTheme.headlineSmall, // 🔥 Fix für Flutter 3+
             ),
             const SizedBox(height: 10),
-            DropdownButton<String>(
-              value: selectedCategory,
-              items: ["Lernen", "Fitness", "Entspannung"].map((String category) {
-                return DropdownMenuItem(
-                  value: category,
-                  child: Row(
-                    children: [
-                      _getCategoryIcon(category),
-                      const SizedBox(width: 10),
-                      Text(category),
-                    ],
-                  ),
-                );
-              }).toList(),
-              onChanged: (value) {
-                setState(() {
-                  selectedCategory = value!;
-                });
-              },
+            Text("Kategorie: $activityCategory", style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            Text("Dauer: $activityDuration", style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 10),
+            Text("Hinzugefügt: $activityTimestamp", style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 20),
+            Text(
+              activityDescription,
+              style: const TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 20),
             ElevatedButton(
-              onPressed: _updateActivity,
-              child: const Text("Speichern"),
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Zurück'),
             ),
           ],
         ),
       ),
     );
-  }
-
-  Icon _getCategoryIcon(String category) {
-    switch (category) {
-      case "Lernen":
-        return const Icon(Icons.book, color: Colors.blue);
-      case "Fitness":
-        return const Icon(Icons.fitness_center, color: Colors.red);
-      case "Entspannung":
-        return const Icon(Icons.self_improvement, color: Colors.green);
-      default:
-        return const Icon(Icons.category, color: Colors.grey);
-    }
   }
 }

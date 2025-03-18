@@ -49,6 +49,8 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
 
   // 📌 Popup für neue Aktivität mit Apple-Timer
   void _showAddActivityDialog() {
+    if (isDeleting) return; // 🔥 Blockiert das Hinzufügen im Löschmodus
+
     TextEditingController nameController = TextEditingController();
     TextEditingController descriptionController = TextEditingController();
     ValueNotifier<String> selectedCategory = ValueNotifier<String>("Lernen");
@@ -61,8 +63,8 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
         return AlertDialog(
           title: const Text("Neue Aktivität hinzufügen"),
           content: SizedBox(
-            width: double.maxFinite, // Verhindert Größenfehler
-            child: SingleChildScrollView( // 🔥 Fix für kleine Displays
+            width: double.maxFinite,
+            child: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -160,8 +162,9 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
+              // 🔥 "Aktivität hinzufügen" wird ausgegraut, wenn im Löschmodus
               ElevatedButton(
-                onPressed: _showAddActivityDialog,
+                onPressed: isDeleting ? null : _showAddActivityDialog,
                 child: const Text("Aktivität hinzufügen"),
               ),
               ElevatedButton(
@@ -175,7 +178,7 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
             ],
           ),
           const Divider(),
-          Expanded( // 🔥 Fix für "Render Box with no size" Fehler
+          Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: activitiesCollection.orderBy("timestamp", descending: true).snapshots(),
               builder: (context, snapshot) {
@@ -207,6 +210,24 @@ class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProvid
                         onPressed: () => _deleteActivity(activity.id),
                       )
                           : null,
+                      // 🔥 Klick öffnet Detailseite (außer im Löschmodus)
+                      onTap: isDeleting
+                          ? null
+                          : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ActivityDetailScreen(
+                              activityId: activity.id,
+                              activityName: data["name"],
+                              activityDescription: data["description"],
+                              activityCategory: data["category"],
+                              activityDuration: data["duration"],
+                              activityTimestamp: formattedTime,
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 );
