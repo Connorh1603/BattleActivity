@@ -1,6 +1,9 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_application_1/screens/activity_detail_screen.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:intl/intl.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -9,59 +12,110 @@ class ActivityScreen extends StatefulWidget {
   _ActivityScreenState createState() => _ActivityScreenState();
 }
 
-class _ActivityScreenState extends State<ActivityScreen> {
-  bool isDeleting = false; // Zustand für Löschmodus
-
+class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProviderStateMixin {
+  bool isDeleting = false;
+  late AnimationController _animationController;
   final CollectionReference activitiesCollection =
   FirebaseFirestore.instance.collection('activities');
 
-  // Funktion für Popup (Aktivität hinzufügen)
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 250),
+      lowerBound: -0.03,
+      upperBound: 0.03,
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  // 🕒 Timestamp als "vor X Minuten/Stunden" formatieren
+  String formatTimestamp(Timestamp? timestamp) {
+    if (timestamp == null) return "Kein Datum";
+    DateTime dateTime = timestamp.toDate();
+    Duration difference = DateTime.now().difference(dateTime);
+
+    if (difference.inMinutes < 1) return "Gerade eben";
+    if (difference.inMinutes < 60) return "vor ${difference.inMinutes} Minuten";
+    if (difference.inHours < 24) return "vor ${difference.inHours} Stunden";
+    return "am ${DateFormat('dd.MM.yyyy HH:mm').format(dateTime)}";
+  }
+
+  // 📌 Popup für neue Aktivität mit Apple-Timer
   void _showAddActivityDialog() {
     TextEditingController nameController = TextEditingController();
     TextEditingController descriptionController = TextEditingController();
     ValueNotifier<String> selectedCategory = ValueNotifier<String>("Lernen");
+    int selectedHours = 0;
+    int selectedMinutes = 30;
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
           title: const Text("Neue Aktivität hinzufügen"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(labelText: "Aktivität"),
-              ),
-              TextField(
-                controller: descriptionController,
-                decoration: const InputDecoration(labelText: "Beschreibung"),
-              ),
-              const SizedBox(height: 10),
-              ValueListenableBuilder<String>(
-                valueListenable: selectedCategory,
-                builder: (context, value, child) {
-                  return DropdownButton<String>(
-                    value: value,
-                    items: ["Lernen", "Fitness", "Entspannung"].map((String category) {
-                      return DropdownMenuItem(
-                        value: category,
-                        child: Row(
-                          children: [
-                            _getCategoryIcon(category),
-                            const SizedBox(width: 10),
-                            Text(category),
-                          ],
-                        ),
+          content: SizedBox(
+            width: double.maxFinite, // Verhindert Größenfehler
+            child: SingleChildScrollView( // 🔥 Fix für kleine Displays
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: "Aktivität"),
+                  ),
+                  TextField(
+                    controller: descriptionController,
+                    decoration: const InputDecoration(labelText: "Beschreibung"),
+                  ),
+                  const SizedBox(height: 10),
+
+                  // 🎛️ Apple-Style Timer für Dauer
+                  SizedBox(
+                    height: 100,
+                    child: CupertinoTimerPicker(
+                      mode: CupertinoTimerPickerMode.hm,
+                      initialTimerDuration: Duration(hours: selectedHours, minutes: selectedMinutes),
+                      onTimerDurationChanged: (Duration newDuration) {
+                        selectedHours = newDuration.inHours;
+                        selectedMinutes = newDuration.inMinutes % 60;
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 10),
+                  ValueListenableBuilder<String>(
+                    valueListenable: selectedCategory,
+                    builder: (context, value, child) {
+                      return DropdownButton<String>(
+                        value: value,
+                        items: ["Lernen", "Fitness", "Entspannung"].map((String category) {
+                          return DropdownMenuItem(
+                            value: category,
+                            child: Row(
+                              children: [
+                                _getCategoryIcon(category),
+                                const SizedBox(width: 10),
+                                Text(category),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (newValue) {
+                          selectedCategory.value = newValue!;
+                        },
                       );
-                    }).toList(),
-                    onChanged: (newValue) {
-                      selectedCategory.value = newValue!;
                     },
-                  );
-                },
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
           actions: [
             TextButton(
@@ -72,12 +126,15 @@ class _ActivityScreenState extends State<ActivityScreen> {
               onPressed: () async {
                 if (nameController.text.isNotEmpty &&
                     descriptionController.text.isNotEmpty) {
+
                   await activitiesCollection.add({
                     "name": nameController.text,
                     "description": descriptionController.text,
                     "category": selectedCategory.value,
+                    "duration": "${selectedHours}h ${selectedMinutes}min",
                     "timestamp": FieldValue.serverTimestamp(),
                   });
+
                   Navigator.pop(context);
                 }
               },
@@ -89,7 +146,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
     );
   }
 
-  // Aktivität löschen
+  // 🔥 Aktivität löschen
   void _deleteActivity(String docId) async {
     await activitiesCollection.doc(docId).delete();
   }
@@ -110,7 +167,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
               ElevatedButton(
                 onPressed: () {
                   setState(() {
-                    isDeleting = !isDeleting; // Löschmodus an/aus
+                    isDeleting = !isDeleting;
                   });
                 },
                 child: Text(isDeleting ? "Fertig" : "Aktivität löschen"),
@@ -118,7 +175,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
             ],
           ),
           const Divider(),
-          Expanded(
+          Expanded( // 🔥 Fix für "Render Box with no size" Fehler
             child: StreamBuilder<QuerySnapshot>(
               stream: activitiesCollection.orderBy("timestamp", descending: true).snapshots(),
               builder: (context, snapshot) {
@@ -135,43 +192,21 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     var activity = activities[index];
                     var data = activity.data() as Map<String, dynamic>;
 
-                    return TweenAnimationBuilder(
-                      tween: isDeleting
-                          ? Tween<double>(begin: -0.05, end: 0.05)
-                          : Tween<double>(begin: 0, end: 0),
-                      duration: const Duration(milliseconds: 150),
-                      curve: Curves.easeInOut,
-                      builder: (context, double angle, child) {
-                        return Transform(
-                          transform: Matrix4.rotationZ(angle),
-                          child: ListTile(
-                            title: Text(data["name"]),
-                            subtitle: Text("${data["description"]} • ${data["category"]}"),
-                            leading: _getCategoryIcon(data["category"]),
-                            trailing: isDeleting
-                                ? IconButton(
-                              icon: const Icon(Icons.close, color: Colors.red),
-                              onPressed: () => _deleteActivity(activity.id),
-                            )
-                                : null,
-                            onTap: isDeleting
-                                ? null
-                                : () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => ActivityDetailScreen(
-                                    activityId: activity.id,
-                                    activityName: data["name"],
-                                    activityDescription: data["description"],
-                                    activityCategory: data["category"],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        );
-                      },
+                    // Timestamp formatieren
+                    Timestamp? timestamp = data["timestamp"] as Timestamp?;
+                    String formattedTime = formatTimestamp(timestamp);
+
+                    return ListTile(
+                      leading: _getCategoryIcon(data["category"]),
+                      title: Text(data["name"]),
+                      subtitle: Text(
+                          "${data["description"]} • ${data["category"]}\nDauer: ${data["duration"]}\nHinzugefügt: $formattedTime"),
+                      trailing: isDeleting
+                          ? IconButton(
+                        icon: const Icon(Icons.close, color: Colors.red),
+                        onPressed: () => _deleteActivity(activity.id),
+                      )
+                          : null,
                     );
                   },
                 );
