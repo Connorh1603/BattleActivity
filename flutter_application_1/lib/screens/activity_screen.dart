@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'activity_detail_screen.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
@@ -10,27 +9,83 @@ class ActivityScreen extends StatefulWidget {
 }
 
 class _ActivityScreenState extends State<ActivityScreen> {
-  final TextEditingController nameController = TextEditingController();
-  final TextEditingController descriptionController = TextEditingController();
-  String selectedCategory = "Lernen";
+  bool isDeleting = false; // Zustand für Löschmodus
 
   final CollectionReference activitiesCollection =
   FirebaseFirestore.instance.collection('activities');
 
-  void _addActivity() async {
-    if (nameController.text.isNotEmpty && descriptionController.text.isNotEmpty) {
-      await activitiesCollection.add({
-        "name": nameController.text,
-        "description": descriptionController.text,
-        "category": selectedCategory,
-        "timestamp": FieldValue.serverTimestamp(),
-      });
+  // Aktivität hinzufügen (öffnet Dialog)
+  void _showAddActivityDialog() {
+    TextEditingController nameController = TextEditingController();
+    TextEditingController descriptionController = TextEditingController();
+    String selectedCategory = "Lernen";
 
-      nameController.clear();
-      descriptionController.clear();
-    }
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Neue Aktivität hinzufügen"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: "Aktivität"),
+              ),
+              TextField(
+                controller: descriptionController,
+                decoration: const InputDecoration(labelText: "Beschreibung"),
+              ),
+              const SizedBox(height: 10),
+              DropdownButton<String>(
+                value: selectedCategory,
+                items: ["Lernen", "Fitness", "Entspannung"].map((String category) {
+                  return DropdownMenuItem(
+                    value: category,
+                    child: Row(
+                      children: [
+                        _getCategoryIcon(category),
+                        const SizedBox(width: 10),
+                        Text(category),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    selectedCategory = value!;
+                  });
+                },
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Abbrechen"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                if (nameController.text.isNotEmpty &&
+                    descriptionController.text.isNotEmpty) {
+                  await activitiesCollection.add({
+                    "name": nameController.text,
+                    "description": descriptionController.text,
+                    "category": selectedCategory,
+                    "timestamp": FieldValue.serverTimestamp(),
+                  });
+                  Navigator.pop(context);
+                }
+              },
+              child: const Text("Hinzufügen"),
+            ),
+          ],
+        );
+      },
+    );
   }
 
+  // Aktivität löschen
   void _deleteActivity(String docId) async {
     await activitiesCollection.doc(docId).delete();
   }
@@ -41,37 +96,22 @@ class _ActivityScreenState extends State<ActivityScreen> {
       appBar: AppBar(title: const Text('Aktivitäten')),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                TextField(
-                  controller: nameController,
-                  decoration: const InputDecoration(labelText: "Aktivität"),
-                ),
-                TextField(
-                  controller: descriptionController,
-                  decoration: const InputDecoration(labelText: "Beschreibung"),
-                ),
-                const SizedBox(height: 10),
-                DropdownButton<String>(
-                  value: selectedCategory,
-                  items: ["Lernen", "Fitness", "Entspannung"].map((String category) {
-                    return DropdownMenuItem(value: category, child: Text(category));
-                  }).toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      selectedCategory = value!;
-                    });
-                  },
-                ),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: _addActivity,
-                  child: const Text("Aktivität hinzufügen"),
-                ),
-              ],
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              ElevatedButton(
+                onPressed: _showAddActivityDialog,
+                child: const Text("Aktivität hinzufügen"),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  setState(() {
+                    isDeleting = !isDeleting; // Löschmodus an/aus
+                  });
+                },
+                child: Text(isDeleting ? "Fertig" : "Aktivität löschen"),
+              ),
+            ],
           ),
           const Divider(),
           Expanded(
@@ -91,27 +131,37 @@ class _ActivityScreenState extends State<ActivityScreen> {
                     var activity = activities[index];
                     var data = activity.data() as Map<String, dynamic>;
 
-                    return ListTile(
-                      title: Text(data["name"]),
-                      subtitle: Text("${data["description"]} • ${data["category"]}"),
-                      leading: _getCategoryIcon(data["category"]),
-                      trailing: IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => _deleteActivity(activity.id),
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ActivityDetailScreen(
-                              activityId: activity.id,
-                              activityName: data["name"],
-                              activityDescription: data["description"],
-                              activityCategory: data["category"],
+                    return AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      transform: isDeleting
+                          ? Matrix4.rotationZ(0.02) // Wackeleffekt
+                          : Matrix4.identity(),
+                      child: ListTile(
+                        title: Text(data["name"]),
+                        subtitle: Text("${data["description"]} • ${data["category"]}"),
+                        leading: _getCategoryIcon(data["category"]),
+                        trailing: isDeleting
+                            ? IconButton(
+                          icon: const Icon(Icons.close, color: Colors.red),
+                          onPressed: () => _deleteActivity(activity.id),
+                        )
+                            : null,
+                        onTap: isDeleting
+                            ? null
+                            : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ActivityDetailScreen(
+                                activityId: activity.id,
+                                activityName: data["name"],
+                                activityDescription: data["description"],
+                                activityCategory: data["category"],
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     );
                   },
                 );

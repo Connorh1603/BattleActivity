@@ -39,7 +39,7 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
       "category": selectedCategory,
     });
 
-    Navigator.pop(context); // Zurück nach Update
+    Navigator.pop(context);
   }
 
   @override
@@ -49,7 +49,6 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             TextField(
               controller: nameController,
@@ -63,7 +62,16 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
             DropdownButton<String>(
               value: selectedCategory,
               items: ["Lernen", "Fitness", "Entspannung"].map((String category) {
-                return DropdownMenuItem(value: category, child: Text(category));
+                return DropdownMenuItem(
+                  value: category,
+                  child: Row(
+                    children: [
+                      _getCategoryIcon(category),
+                      const SizedBox(width: 10),
+                      Text(category),
+                    ],
+                  ),
+                );
               }).toList(),
               onChanged: (value) {
                 setState(() {
@@ -80,5 +88,18 @@ class _ActivityDetailScreenState extends State<ActivityDetailScreen> {
         ),
       ),
     );
+  }
+
+  Icon _getCategoryIcon(String category) {
+    switch (category) {
+      case "Lernen":
+        return const Icon(Icons.book, color: Colors.blue);
+      case "Fitness":
+        return const Icon(Icons.fitness_center, color: Colors.red);
+      case "Entspannung":
+        return const Icon(Icons.self_improvement, color: Colors.green);
+      default:
+        return const Icon(Icons.category, color: Colors.grey);
+    }
   }
 }
