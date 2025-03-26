@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -12,13 +13,15 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _resetEmailController = TextEditingController();
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
+    _resetEmailController.dispose();
     super.dispose();
   }
 
@@ -28,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
       GoogleSignInPlatform.instance.initWithParams(
         const SignInInitParameters(
           clientId: '794057343882-5199hq39lfqhjs28u778ebtciik51fdv.apps.googleusercontent.com',
-    serverClientId: '794057343882-5199hq39lfqhjs28u778ebtciik51fdv.apps.googleusercontent.com',
+          serverClientId: '794057343882-5199hq39lfqhjs28u778ebtciik51fdv.apps.googleusercontent.com',
         ),
       );
     }
@@ -61,7 +64,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
         await FirebaseAuth.instance.signInWithCredential(credential);
 
-        Navigator.pushNamed(context, '/archievement');
+        // Überprüfe, ob die E-Mail-Adresse bereits existiert
+        final User? user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          if (user.emailVerified) {
+            Navigator.pushNamed(context, '/archievement');
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Please verify your email address.')),
+            );
+          }
+        }
       } else {
         // Mobile Implementierung bleibt unverändert
         final GoogleSignIn googleSignIn = GoogleSignIn();
@@ -85,13 +98,99 @@ class _LoginScreenState extends State<LoginScreen> {
 
         await FirebaseAuth.instance.signInWithCredential(credential);
 
-        Navigator.pushNamed(context, '/archievement');
+        // Überprüfe, ob die E-Mail-Adresse bereits existiert
+        final User? user = FirebaseAuth.instance.currentUser;
+        if (user != null) {
+          if (user.emailVerified) {
+            Navigator.pushNamed(context, '/archievement');
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Please verify your email address.')),
+            );
+          }
+        }
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Google sign-in failed: $e')),
       );
     }
+  }
+
+  Future<void> _loginWithUsernameAndPassword() async {
+    try {
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      final QuerySnapshot querySnapshot = await firestore.collection('users').get();
+
+      // Map usernames to emails
+      final Map<String, String> usernameToEmail = {
+        for (var doc in querySnapshot.docs) doc.get('username'): doc.get('email')
+      };
+
+      final String? email = usernameToEmail[_usernameController.text];
+
+      if (email == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Username not found.')),
+        );
+        return;
+      }
+
+      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: _passwordController.text,
+      );
+
+      if (userCredential.user?.emailVerified ?? false) {
+        Navigator.pushNamed(context, '/archievement');
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Please verify your email address before logging in.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login failed! Please check your credentials.')),
+      );
+    }
+  }
+
+  Future<void> _resetPassword() async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Reset Password'),
+        content: TextField(
+          controller: _resetEmailController,
+          decoration: InputDecoration(
+            labelText: 'Email',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              try {
+                await FirebaseAuth.instance.sendPasswordResetEmail(email: _resetEmailController.text);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('A password reset email has been sent to your address.')),
+                );
+                Navigator.of(context).pop();
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error resetting password: $e')),
+                );
+              }
+            },
+            child: Text('Reset'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -110,9 +209,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     children: [
                       TextField(
-                        controller: _emailController,
+                        controller: _usernameController,
                         decoration: InputDecoration(
-                          labelText: 'Email',
+                          labelText: 'Username',
                           border: OutlineInputBorder(),
                         ),
                       ),
@@ -125,35 +224,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         obscureText: true,
                       ),
+                      TextButton(
+                        onPressed: _resetPassword,
+                        child: Text('Forgot Password'),
+                      ),
                     ],
                   ),
                 ),
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () async {
-                  try {
-                    UserCredential userCredential = await FirebaseAuth.instance
-                        .signInWithEmailAndPassword(
-                      email: _emailController.text,
-                      password: _passwordController.text,
-                    );
-
-                    if (userCredential.user?.emailVerified ?? false) {
-                      Navigator.pushNamed(context, '/archievement');
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content:
-                            Text('Please verify your email address before logging in.'),
-                      ));
-                    }
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                      content:
-                          Text('Login failed! Please check your credentials.'),
-                    ));
-                  }
-                },
+                onPressed: _loginWithUsernameAndPassword,
                 child: Text('Login'),
               ),
               SizedBox(height: 10),
