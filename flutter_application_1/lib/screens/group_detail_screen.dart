@@ -5,12 +5,15 @@ import 'package:flutter/services.dart';
 
 class GroupDetailScreen extends StatelessWidget {
   final String groupId;
-  final String userId;
+  final String username;
 
-  const GroupDetailScreen({super.key, required this.groupId, required this.userId});
+  const GroupDetailScreen({super.key, required this.groupId, required this.username});
 
   @override
   Widget build(BuildContext context) {
+
+    print("DEBUG: Benutzername im Detail-Screen: $username");
+    
     return Scaffold(
       appBar: AppBar(title: Text('Gruppendetails')),
       body: FutureBuilder<DocumentSnapshot>(
@@ -28,7 +31,7 @@ class GroupDetailScreen extends StatelessWidget {
           final groupType = groupData['typ'] ?? 'Kein Typ';
           final adminId = groupData['admin'] ?? '';
           final members = List<String>.from(groupData['members'] ?? []);
-          final isAdmin = userId == adminId;
+          final isAdmin = username == adminId;
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
@@ -178,7 +181,7 @@ class GroupDetailScreen extends StatelessWidget {
                       final groupSnapshot = await groupRef.get();
                       final adminId = groupSnapshot['admin'] ?? '';
 
-                      if (adminId == userId) {
+                      if (adminId == username) {
                         _showChangeGroupNameDialog(context);
                       } else {
                         _showNotAdminMessage(context);
@@ -247,9 +250,9 @@ class GroupDetailScreen extends StatelessWidget {
   Future<void> _leaveGroup() async {
     final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
     await groupRef.update({
-      'members': FieldValue.arrayRemove([userId])
+      'members': FieldValue.arrayRemove([username])
     });
-    print("$userId hat die Gruppe verlassen.");
+    print("$username hat die Gruppe verlassen.");
   }
 
   Future<List<Map<String, dynamic>>> _getLeaderboardData(List<String> members) async {
