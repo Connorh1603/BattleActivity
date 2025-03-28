@@ -38,6 +38,8 @@ dependencies:
   google_sign_in_web: ^0.12.4+4
   google_sign_in_platform_interface: ^2.0.0
   universal_platform: ^1.1.0
+  image_picker: ^1.1.2
+  path_provider: ^2.0.14
 
 
 
