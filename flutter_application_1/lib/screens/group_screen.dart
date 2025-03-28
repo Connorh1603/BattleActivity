@@ -53,13 +53,17 @@ class GroupScreen extends StatelessWidget {
                         title: Text(groupName),
                         subtitle: Text(groupType),
                         onTap: () {
-                            Navigator.push(
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => GroupDetailScreen(groupId: group.id),
+                              builder: (context) => GroupDetailScreen(
+                                groupId: group.id,
+                                userId: userId,  // Hier wird die userId übergeben
+                              ),
                             ),
                           );
                         },
+
                       );
                     },
                   );
