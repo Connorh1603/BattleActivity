@@ -1,10 +1,7 @@
-// ----------------------
-// activity_screen.dart
-// ----------------------
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'add_activity_screen.dart';
+import 'add_edit_activity_screen.dart';
 import '../widgets/activity_card.dart';
 import '../widgets/category_chip.dart';
 
@@ -102,7 +99,7 @@ class _ActivityScreenState extends State<ActivityScreen> {
                   return ListView(
                     children: docs.map((doc) {
                       final data = doc.data() as Map<String, dynamic>;
-                      return ActivityCard(data: data);
+                      return ActivityCard(doc: doc, userId: userId);;
                     }).toList(),
                   );
                 },
@@ -115,7 +112,10 @@ class _ActivityScreenState extends State<ActivityScreen> {
         child: const Icon(Icons.add),
         onPressed: () => Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => AddActivityScreen(categories: categories)),
+          MaterialPageRoute(builder: (context) => AddEditActivityScreen(
+            categories: categories,
+            userId: userId,
+          )),
         ),
       ),
     );
