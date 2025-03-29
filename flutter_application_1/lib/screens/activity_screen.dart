@@ -1,254 +1,123 @@
-import 'dart:math';
+// ----------------------
+// activity_screen.dart
+// ----------------------
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_application_1/screens/activity_detail_screen.dart';
-import 'package:flutter/cupertino.dart';
-import 'package:intl/intl.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'add_activity_screen.dart';
+import '../widgets/activity_card.dart';
+import '../widgets/category_chip.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
 
   @override
-  _ActivityScreenState createState() => _ActivityScreenState();
+  State<ActivityScreen> createState() => _ActivityScreenState();
 }
 
-class _ActivityScreenState extends State<ActivityScreen> with SingleTickerProviderStateMixin {
-  bool isDeleting = false;
-  late AnimationController _animationController;
-  final CollectionReference activitiesCollection =
-  FirebaseFirestore.instance.collection('activities');
+class _ActivityScreenState extends State<ActivityScreen> {
+  String selectedCategory = '';
+  String searchText = '';
 
-  @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 250),
-      lowerBound: -0.03,
-      upperBound: 0.03,
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
-  // 🕒 Timestamp als "vor X Minuten/Stunden" formatieren
-  String formatTimestamp(Timestamp? timestamp) {
-    if (timestamp == null) return "Kein Datum";
-    DateTime dateTime = timestamp.toDate();
-    Duration difference = DateTime.now().difference(dateTime);
-
-    if (difference.inMinutes < 1) return "Gerade eben";
-    if (difference.inMinutes < 60) return "vor ${difference.inMinutes} Minuten";
-    if (difference.inHours < 24) return "vor ${difference.inHours} Stunden";
-    return "am ${DateFormat('dd.MM.yyyy HH:mm').format(dateTime)}";
-  }
-
-  // 📌 Popup für neue Aktivität mit Apple-Timer
-  void _showAddActivityDialog() {
-    if (isDeleting) return; // 🔥 Blockiert das Hinzufügen im Löschmodus
-
-    TextEditingController nameController = TextEditingController();
-    TextEditingController descriptionController = TextEditingController();
-    ValueNotifier<String> selectedCategory = ValueNotifier<String>("Lernen");
-    int selectedHours = 0;
-    int selectedMinutes = 30;
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Neue Aktivität hinzufügen"),
-          content: SizedBox(
-            width: double.maxFinite,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: const InputDecoration(labelText: "Aktivität"),
-                  ),
-                  TextField(
-                    controller: descriptionController,
-                    decoration: const InputDecoration(labelText: "Beschreibung"),
-                  ),
-                  const SizedBox(height: 10),
-
-                  // 🎛️ Apple-Style Timer für Dauer
-                  SizedBox(
-                    height: 100,
-                    child: CupertinoTimerPicker(
-                      mode: CupertinoTimerPickerMode.hm,
-                      initialTimerDuration: Duration(hours: selectedHours, minutes: selectedMinutes),
-                      onTimerDurationChanged: (Duration newDuration) {
-                        selectedHours = newDuration.inHours;
-                        selectedMinutes = newDuration.inMinutes % 60;
-                      },
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-                  ValueListenableBuilder<String>(
-                    valueListenable: selectedCategory,
-                    builder: (context, value, child) {
-                      return DropdownButton<String>(
-                        value: value,
-                        items: ["Lernen", "Fitness", "Entspannung"].map((String category) {
-                          return DropdownMenuItem(
-                            value: category,
-                            child: Row(
-                              children: [
-                                _getCategoryIcon(category),
-                                const SizedBox(width: 10),
-                                Text(category),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          selectedCategory.value = newValue!;
-                        },
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Abbrechen"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                if (nameController.text.isNotEmpty &&
-                    descriptionController.text.isNotEmpty) {
-
-                  await activitiesCollection.add({
-                    "name": nameController.text,
-                    "description": descriptionController.text,
-                    "category": selectedCategory.value,
-                    "duration": "${selectedHours}h ${selectedMinutes}min",
-                    "timestamp": FieldValue.serverTimestamp(),
-                  });
-
-                  Navigator.pop(context);
-                }
-              },
-              child: const Text("Hinzufügen"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  // 🔥 Aktivität löschen
-  void _deleteActivity(String docId) async {
-    await activitiesCollection.doc(docId).delete();
-  }
+  final List<Map<String, dynamic>> categories = [
+    {'name': 'Sport', 'icon': Icons.fitness_center},
+    {'name': 'Lernen', 'icon': Icons.school},
+    {'name': 'Kochen', 'icon': Icons.restaurant},
+    {'name': 'Musik', 'icon': Icons.music_note},
+  ];
 
   @override
   Widget build(BuildContext context) {
+    final userId = FirebaseAuth.instance.currentUser?.uid ?? "dev_user";
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Aktivitäten')),
-      body: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              // 🔥 "Aktivität hinzufügen" wird ausgegraut, wenn im Löschmodus
-              ElevatedButton(
-                onPressed: isDeleting ? null : _showAddActivityDialog,
-                child: const Text("Aktivität hinzufügen"),
+      appBar: AppBar(
+        title: const Text("Meine Aktivitäten"),
+        centerTitle: true,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          children: [
+            TextField(
+              decoration: const InputDecoration(
+                hintText: "Aktivität suchen...",
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(12))),
               ),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    isDeleting = !isDeleting;
-                  });
-                },
-                child: Text(isDeleting ? "Fertig" : "Aktivität löschen"),
-              ),
-            ],
-          ),
-          const Divider(),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: activitiesCollection.orderBy("timestamp", descending: true).snapshots(),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                var activities = snapshot.data!.docs;
-
-                return ListView.separated(
-                  itemCount: activities.length,
-                  separatorBuilder: (context, index) => const Divider(),
-                  itemBuilder: (context, index) {
-                    var activity = activities[index];
-                    var data = activity.data() as Map<String, dynamic>;
-
-                    // Timestamp formatieren
-                    Timestamp? timestamp = data["timestamp"] as Timestamp?;
-                    String formattedTime = formatTimestamp(timestamp);
-
-                    return ListTile(
-                      leading: _getCategoryIcon(data["category"]),
-                      title: Text(data["name"]),
-                      subtitle: Text(
-                          "${data["description"]} • ${data["category"]}\nDauer: ${data["duration"]}\nHinzugefügt: $formattedTime"),
-                      trailing: isDeleting
-                          ? IconButton(
-                        icon: const Icon(Icons.close, color: Colors.red),
-                        onPressed: () => _deleteActivity(activity.id),
-                      )
-                          : null,
-                      // 🔥 Klick öffnet Detailseite (außer im Löschmodus)
-                      onTap: isDeleting
-                          ? null
-                          : () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => ActivityDetailScreen(
-                              activityId: activity.id,
-                              activityName: data["name"],
-                              activityDescription: data["description"],
-                              activityCategory: data["category"],
-                              activityDuration: data["duration"],
-                              activityTimestamp: formattedTime,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
+              onChanged: (value) {
+                setState(() {
+                  searchText = value.toLowerCase();
+                });
               },
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: categories.map((cat) => CategoryChip(
+                  category: cat,
+                  selected: selectedCategory == cat['name'],
+                  onTap: () {
+                    setState(() {
+                      selectedCategory = selectedCategory == cat['name'] ? '' : cat['name'];
+                    });
+                  },
+                )).toList(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(userId)
+                    .collection('activities')
+                    .orderBy('timestamp', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+                  final docs = snapshot.data!.docs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final title = data['title']?.toLowerCase() ?? '';
+                    final category = data['category'] ?? '';
+                    return (selectedCategory.isEmpty || category == selectedCategory) &&
+                        (searchText.isEmpty || title.contains(searchText));
+                  }).toList();
+
+                  if (docs.isEmpty) {
+                    return const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.hourglass_empty, size: 60),
+                          SizedBox(height: 8),
+                          Text("Noch keine Aktivitäten 🪄"),
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView(
+                    children: docs.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      return ActivityCard(data: data);
+                    }).toList(),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        child: const Icon(Icons.add),
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => AddActivityScreen(categories: categories)),
+        ),
       ),
     );
-  }
-
-  Icon _getCategoryIcon(String category) {
-    switch (category) {
-      case "Lernen":
-        return const Icon(Icons.book, color: Colors.blue);
-      case "Fitness":
-        return const Icon(Icons.fitness_center, color: Colors.red);
-      case "Entspannung":
-        return const Icon(Icons.self_improvement, color: Colors.green);
-      default:
-        return const Icon(Icons.category, color: Colors.grey);
-    }
   }
 }
