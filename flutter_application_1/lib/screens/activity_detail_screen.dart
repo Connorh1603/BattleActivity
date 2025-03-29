@@ -1,6 +1,3 @@
-// ----------------------
-// activity_detail_screen.dart (fixed)
-// ----------------------
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'add_edit_activity_screen.dart';
@@ -11,7 +8,12 @@ class ActivityDetailScreen extends StatelessWidget {
   final String userId;
   final List<Map<String, dynamic>> categories;
 
-  const ActivityDetailScreen({super.key, required this.doc, required this.userId, required this.categories});
+  const ActivityDetailScreen({
+    super.key,
+    required this.doc,
+    required this.userId,
+    required this.categories,
+  });
 
   void _deleteActivity(BuildContext context) async {
     final confirmed = await showDialog(
@@ -69,6 +71,15 @@ class ActivityDetailScreen extends StatelessWidget {
               data['title'] ?? '',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            const SizedBox(height: 10),
+            if ((data['imageUrl'] ?? '').isNotEmpty)
+              Image.network(data['imageUrl'], height: 200, fit: BoxFit.cover)
+            else
+              Container(
+                height: 200,
+                color: Colors.grey[300],
+                child: const Center(child: Text("Kein Bild vorhanden")),
+              ),
             const SizedBox(height: 10),
             Text("Kategorie: ${data['category']}"),
             Text("Dauer: ${data['duration']} Minuten"),

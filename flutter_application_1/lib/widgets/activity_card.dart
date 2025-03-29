@@ -1,5 +1,5 @@
 // ----------------------
-// activity_card.dart (fixed)
+// activity_card.dart (final polished)
 // ----------------------
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -34,11 +34,29 @@ class ActivityCard extends StatelessWidget {
         );
       },
       child: Card(
-        elevation: 3,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: ListTile(
-          leading: const Icon(Icons.check_circle_outline),
-          title: Text(data['title'] ?? ''),
+          leading: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: (data['imageUrl'] ?? '').isNotEmpty
+                ? Image.network(
+              data['imageUrl'],
+              width: 50,
+              height: 50,
+              fit: BoxFit.cover,
+            )
+                : Container(
+              width: 50,
+              height: 50,
+              color: Colors.grey[300],
+              child: const Icon(Icons.image, size: 24),
+            ),
+          ),
+          title: Text(
+            data['title'] ?? '',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           subtitle: Text("${data['category']} • ${data['duration']} min"),
           trailing: Text(
             DateTime.fromMillisecondsSinceEpoch(data['timestamp'].millisecondsSinceEpoch)

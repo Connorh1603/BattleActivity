@@ -1,5 +1,13 @@
+// ----------------------
+// add_edit_activity_screen.dart (Endlos-Upload FIX ✅)
+// ----------------------
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
 
 class AddEditActivityScreen extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
@@ -23,6 +31,9 @@ class _AddEditActivityScreenState extends State<AddEditActivityScreen> {
   String description = '';
   int duration = 0;
   String? category;
+  XFile? _imageFile;
+  String? _imageUrl;
+  bool _isUploading = false;
 
   @override
   void initState() {
@@ -33,7 +44,43 @@ class _AddEditActivityScreenState extends State<AddEditActivityScreen> {
       description = data['description'] ?? '';
       duration = data['duration'] ?? 0;
       category = data['category'] ?? null;
+      _imageUrl = data['imageUrl'];
     }
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 1024, // Optimierung
+      maxHeight: 1024,
+    );
+    if (picked != null) {
+      setState(() {
+        _imageFile = picked;
+      });
+    }
+  }
+
+  Future<String?> _uploadImage(String activityId) async {
+    if (_imageFile == null) return _imageUrl;
+    setState(() => _isUploading = true);
+
+    final ref = FirebaseStorage.instance
+        .ref('activities/${widget.userId}/$activityId/image.jpg');
+
+    if (kIsWeb) {
+      final Uint8List bytes = await _imageFile!.readAsBytes();
+      final uploadTask = ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+      await uploadTask.whenComplete(() {});
+    } else {
+      final file = File(_imageFile!.path);
+      final uploadTask = ref.putFile(file);
+      await uploadTask.whenComplete(() {});
+    }
+
+    setState(() => _isUploading = false);
+    return await ref.getDownloadURL();
   }
 
   void _saveActivity() async {
@@ -44,36 +91,40 @@ class _AddEditActivityScreenState extends State<AddEditActivityScreen> {
       return;
     }
 
-    final data = {
-      'title': title,
-      'description': description,
-      'duration': duration,
-      'category': category,
-      'timestamp': Timestamp.now(),
-    };
+    final activitiesRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.userId)
+        .collection('activities');
 
     if (widget.existingDoc == null) {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.userId)
-          .collection('activities')
-          .add(data);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Aktivität erstellt ✅")),
-      );
+      final newDoc = await activitiesRef.add({
+        'title': title,
+        'description': description,
+        'duration': duration,
+        'category': category,
+        'timestamp': Timestamp.now(),
+      });
+      final imageUrl = await _uploadImage(newDoc.id);
+      if (imageUrl != null) {
+        await newDoc.update({'imageUrl': imageUrl});
+      }
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Aktivität erstellt ✅")));
     } else {
-      await FirebaseFirestore.instance
-          .collection('users')
-          .doc(widget.userId)
-          .collection('activities')
-          .doc(widget.existingDoc!.id)
-          .update(data);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Aktivität aktualisiert ✅")),
-      );
+      await activitiesRef.doc(widget.existingDoc!.id).update({
+        'title': title,
+        'description': description,
+        'duration': duration,
+        'category': category,
+        'timestamp': Timestamp.now(),
+      });
+      final imageUrl = await _uploadImage(widget.existingDoc!.id);
+      if (imageUrl != null) {
+        await activitiesRef.doc(widget.existingDoc!.id).update({'imageUrl': imageUrl});
+      }
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Aktivität aktualisiert ✅")));
     }
 
-    Navigator.pop(context);
+    if (mounted) Navigator.pop(context);
   }
 
   @override
@@ -118,10 +169,33 @@ class _AddEditActivityScreenState extends State<AddEditActivityScreen> {
                 onChanged: (val) => setState(() => category = val as String?),
               ),
               const SizedBox(height: 20),
-              ElevatedButton(
-                child: Text(widget.existingDoc == null ? "Speichern" : "Aktualisieren"),
-                onPressed: _saveActivity,
+              if (_imageFile != null)
+                kIsWeb
+                    ? FutureBuilder<Uint8List>(
+                  future: _imageFile!.readAsBytes(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) return const CircularProgressIndicator();
+                    return Image.memory(snapshot.data!, height: 150, fit: BoxFit.cover);
+                  },
+                )
+                    : Image.file(File(_imageFile!.path), height: 150, fit: BoxFit.cover)
+              else if ((_imageUrl ?? '').isNotEmpty)
+                Image.network(_imageUrl!, height: 150, fit: BoxFit.cover)
+              else
+                const Text("Kein Bild ausgewählt"),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                icon: const Icon(Icons.image),
+                label: const Text("Bild auswählen"),
+                onPressed: _pickImage,
               ),
+              const SizedBox(height: 20),
+              if (_isUploading) const Center(child: CircularProgressIndicator()),
+              if (!_isUploading)
+                ElevatedButton(
+                  child: Text(widget.existingDoc == null ? "Speichern" : "Aktualisieren"),
+                  onPressed: _saveActivity,
+                ),
             ],
           ),
         ),
