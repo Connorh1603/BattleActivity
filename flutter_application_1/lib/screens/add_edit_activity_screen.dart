@@ -1,13 +1,12 @@
 // ----------------------
-// add_edit_activity_screen.dart (Endlos-Upload FIX ✅)
+// FINAL Upload Fix (Web + Mobile)
 // ----------------------
-import 'dart:io';
 import 'dart:typed_data';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 
 class AddEditActivityScreen extends StatefulWidget {
   final List<Map<String, dynamic>> categories;
@@ -31,7 +30,8 @@ class _AddEditActivityScreenState extends State<AddEditActivityScreen> {
   String description = '';
   int duration = 0;
   String? category;
-  XFile? _imageFile;
+  Uint8List? _fileBytes;
+  String? _fileName;
   String? _imageUrl;
   bool _isUploading = false;
 
@@ -49,36 +49,52 @@ class _AddEditActivityScreenState extends State<AddEditActivityScreen> {
   }
 
   Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      maxWidth: 1024, // Optimierung
-      maxHeight: 1024,
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      allowMultiple: false,
+      withData: true,
     );
-    if (picked != null) {
+
+    if (result != null && result.files.first.bytes != null) {
+      final fileName = result.files.first.name;
+      final extension = fileName.split('.').last.toLowerCase();
+
+      if (extension != 'jpg' && extension != 'jpeg' && extension != 'png') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nur JPG und PNG erlaubt'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       setState(() {
-        _imageFile = picked;
+        _fileBytes = result.files.first.bytes;
+        _fileName = fileName;
       });
     }
   }
 
   Future<String?> _uploadImage(String activityId) async {
-    if (_imageFile == null) return _imageUrl;
+    if (_fileBytes == null) return _imageUrl;
     setState(() => _isUploading = true);
 
+    final extension = _fileName!.split('.').last.toLowerCase();
+    String contentType = 'image/jpeg';
+    if (extension == 'png') contentType = 'image/png';
+    if (extension == 'jpeg') contentType = 'image/jpeg';
+    if (extension == 'jpg') contentType = 'image/jpeg';
+
     final ref = FirebaseStorage.instance
-        .ref('activities/${widget.userId}/$activityId/image.jpg');
+        .ref('activities/${widget.userId}/$activityId/image.$extension');
 
-    if (kIsWeb) {
-      final Uint8List bytes = await _imageFile!.readAsBytes();
-      final uploadTask = ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
-      await uploadTask.whenComplete(() {});
-    } else {
-      final file = File(_imageFile!.path);
-      final uploadTask = ref.putFile(file);
-      await uploadTask.whenComplete(() {});
-    }
+    final uploadTask = ref.putData(
+      _fileBytes!,
+      SettableMetadata(contentType: contentType),
+    );
 
+    await uploadTask.whenComplete(() {});
     setState(() => _isUploading = false);
     return await ref.getDownloadURL();
   }
@@ -169,16 +185,8 @@ class _AddEditActivityScreenState extends State<AddEditActivityScreen> {
                 onChanged: (val) => setState(() => category = val as String?),
               ),
               const SizedBox(height: 20),
-              if (_imageFile != null)
-                kIsWeb
-                    ? FutureBuilder<Uint8List>(
-                  future: _imageFile!.readAsBytes(),
-                  builder: (context, snapshot) {
-                    if (!snapshot.hasData) return const CircularProgressIndicator();
-                    return Image.memory(snapshot.data!, height: 150, fit: BoxFit.cover);
-                  },
-                )
-                    : Image.file(File(_imageFile!.path), height: 150, fit: BoxFit.cover)
+              if (_fileBytes != null)
+                Image.memory(_fileBytes!, height: 150, fit: BoxFit.cover)
               else if ((_imageUrl ?? '').isNotEmpty)
                 Image.network(_imageUrl!, height: 150, fit: BoxFit.cover)
               else

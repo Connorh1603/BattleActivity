@@ -1,5 +1,5 @@
 // ----------------------
-// activity_card.dart (final polished)
+// activity_card.dart (Web + Mobile Ready, Polished)
 // ----------------------
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';

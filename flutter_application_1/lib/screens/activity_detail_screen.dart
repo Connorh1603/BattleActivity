@@ -1,3 +1,6 @@
+// ----------------------
+// activity_detail_screen.dart (MIME-Type Safe)
+// ----------------------
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'add_edit_activity_screen.dart';
