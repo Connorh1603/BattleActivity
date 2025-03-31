@@ -81,6 +81,55 @@ class GroupDetailScreen extends StatelessWidget {
                   ),
                 ),
                 SizedBox(height: 16),
+                FutureBuilder<Map<String, dynamic>?>(
+                  future: _getLatestActivityInfo(members, groupType, groupSubType),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
+
+                    final data = snapshot.data;
+
+                    if (data == null) {
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: Text(
+                            "Noch keine Aktivität in dieser Gruppe.",
+                            style: TextStyle(fontStyle: FontStyle.italic),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final username = data['username'];
+                    final duration = data['duration'];
+                    final timestamp = data['timestamp'] as DateTime;
+
+                    final diff = DateTime.now().difference(timestamp);
+                    final String timeAgo = diff.inDays > 0
+                        ? "vor ${diff.inDays} Tag(en)"
+                        : diff.inHours > 0
+                            ? "vor ${diff.inHours} Stunde(n)"
+                            : "gerade eben";
+
+                    return Card(
+                      color: Colors.orange.shade50,
+                      elevation: 4,
+                      margin: const EdgeInsets.symmetric(vertical: 16),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          "$username hat $timeAgo eine Aktivität unternommen und $duration Minuten seinem Score hinzugefügt.",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    );
+                  },
+                ),
                 Text("Leaderboard:", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
                 Expanded(
@@ -99,55 +148,58 @@ class GroupDetailScreen extends StatelessWidget {
                           .map((e) => (e['valueMonthly'] as num?)?.toDouble() ?? 0.0)
                           .fold<double>(0.0, (a, b) => a > b ? a : b);
 
-                      return BarChart(
-                        BarChartData(
-                          alignment: BarChartAlignment.spaceBetween,
-                          maxY: maxY,
-                          barGroups: leaderboardData.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final user = entry.value;
+                      return Padding(
+                        padding: const EdgeInsets.only(left: 16.0, right: 22.0), // ⬅️ Abstand links & rechts
+                        child: BarChart(
+                          BarChartData(
+                            alignment: BarChartAlignment.spaceBetween,
+                            maxY: maxY,
+                            barGroups: leaderboardData.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final user = entry.value;
 
-                            return BarChartGroupData(
-                              x: index,
-                              barsSpace: 12,
-                              barRods: [
-                                BarChartRodData(
-                                  toY: (user['valueMonthly'] as num).toDouble(),
-                                  color: Colors.blue,
-                                  width: 20,
-                                  borderRadius: BorderRadius.circular(8),
+                              return BarChartGroupData(
+                                x: index,
+                                barsSpace: 12,
+                                barRods: [
+                                  BarChartRodData(
+                                    toY: (user['valueMonthly'] as num).toDouble(),
+                                    color: Colors.blue,
+                                    width: 20,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                            titlesData: FlTitlesData(
+                              leftTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 50,
+                                  getTitlesWidget: (value, meta) =>
+                                      Text(value.toInt().toString(), style: TextStyle(fontSize: 12)),
                                 ),
-                              ],
-                            );
-                          }).toList(),
-                          titlesData: FlTitlesData(
-                            leftTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                reservedSize: 50,
-                                getTitlesWidget: (value, meta) =>
-                                    Text(value.toInt().toString(), style: TextStyle(fontSize: 12)),
                               ),
-                            ),
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                reservedSize: 40,
-                                getTitlesWidget: (value, meta) {
-                                  if (value.toInt() >= leaderboardData.length) return Container();
-                                  final userName = leaderboardData[value.toInt()]['user'];
-                                  return Padding(
-                                    padding: const EdgeInsets.only(top: 8.0),
-                                    child: Text(userName, style: TextStyle(fontSize: 14)),
-                                  );
-                                },
+                              bottomTitles: AxisTitles(
+                                sideTitles: SideTitles(
+                                  showTitles: true,
+                                  reservedSize: 40,
+                                  getTitlesWidget: (value, meta) {
+                                    if (value.toInt() >= leaderboardData.length) return Container();
+                                    final userName = leaderboardData[value.toInt()]['user'];
+                                    return Padding(
+                                      padding: const EdgeInsets.only(top: 8.0),
+                                      child: Text(userName, style: TextStyle(fontSize: 14)),
+                                    );
+                                  },
+                                ),
                               ),
+                              topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                              rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                             ),
-                            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            gridData: FlGridData(show: true),
+                            borderData: FlBorderData(show: false),
                           ),
-                          gridData: FlGridData(show: true),
-                          borderData: FlBorderData(show: false),
                         ),
                       );
                     },
@@ -262,6 +314,56 @@ class GroupDetailScreen extends StatelessWidget {
       ),
     );
   }
+  Future<Map<String, dynamic>?> _getLatestActivityInfo(List<String> members, String category, String subcategory) async {
+  DateTime now = DateTime.now();
+  DateTime startOfMonth = DateTime(now.year, now.month, 1);
+
+  Map<String, dynamic>? latestActivity;
+  Timestamp? latestTimestamp;
+
+  final normalizedGroupCategory = category.toLowerCase();
+  final normalizedSubcategory = subcategory.toLowerCase();
+
+  for (String userId in members) {
+    final activitiesRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(userId)
+        .collection('activities');
+
+    final snapshot = await activitiesRef
+        .where('timestamp', isGreaterThanOrEqualTo: startOfMonth)
+        .orderBy('timestamp', descending: true)
+        .get();
+
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+      final activityCategory = (data['category'] ?? '').toString().toLowerCase();
+      final duration = (data['duration'] as num?)?.toInt() ?? 0;
+      final timestamp = data['timestamp'] as Timestamp?;
+
+      final isMatching = normalizedSubcategory.isNotEmpty && normalizedSubcategory != 'keiner'
+          ? activityCategory == normalizedSubcategory
+          : activityCategory == normalizedGroupCategory;
+
+      if (isMatching && timestamp != null) {
+        if (latestTimestamp == null || timestamp.toDate().isAfter(latestTimestamp!.toDate())) {
+          // Hole Username des Users
+          final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+          final username = userDoc.data()?['username'] ?? 'Unbekannt';
+
+          latestActivity = {
+            'username': username,
+            'timestamp': timestamp.toDate(),
+            'duration': duration,
+          };
+          latestTimestamp = timestamp;
+        }
+      }
+    }
+  }
+
+  return latestActivity;
+}
 
   void _showAddMemberDialog(BuildContext context, bool isAdmin) {
     showDialog(
