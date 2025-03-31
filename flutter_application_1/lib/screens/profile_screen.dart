@@ -181,7 +181,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           itemCount: snapshot.data!.docs.length,
                           itemBuilder: (context, index) {
                             final activity = snapshot.data!.docs[index];
-                            final activityId = activity.id;
                             final imageUrl = activity.get('imageUrl');
                             return Card(
                               elevation: 4,

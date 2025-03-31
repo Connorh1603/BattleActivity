@@ -346,7 +346,7 @@ class GroupDetailScreen extends StatelessWidget {
           : activityCategory == normalizedGroupCategory;
 
       if (isMatching && timestamp != null) {
-        if (latestTimestamp == null || timestamp.toDate().isAfter(latestTimestamp!.toDate())) {
+        if (latestTimestamp == null || timestamp.toDate().isAfter(latestTimestamp.toDate())) {
           // Hole Username des Users
           final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
           final username = userDoc.data()?['username'] ?? 'Unbekannt';
