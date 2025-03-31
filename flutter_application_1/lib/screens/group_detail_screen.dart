@@ -82,7 +82,7 @@ class GroupDetailScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 16),
                 FutureBuilder<Map<String, dynamic>?>(
-                  future: _getLatestActivityInfo(members, groupType, groupSubType),
+                  future: _getLatestActivityInfo(members),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return Padding(
@@ -134,7 +134,7 @@ class GroupDetailScreen extends StatelessWidget {
                 SizedBox(height: 8),
                 Expanded(
                   child: FutureBuilder<List<Map<String, dynamic>>>(
-                    future: _getLeaderboardData(members, groupType, groupSubType),
+                    future: _getLeaderboardData(members),
                     builder: (context, leaderboardSnapshot) {
                       if (leaderboardSnapshot.connectionState == ConnectionState.waiting) {
                         return Center(child: CircularProgressIndicator());
@@ -250,51 +250,41 @@ class GroupDetailScreen extends StatelessWidget {
     );
   }
 
-  Future<List<Map<String, dynamic>>> _getLeaderboardData(List<String> members, String category, String subcategory) async {
+  Future<List<Map<String, dynamic>>> _getLeaderboardData(List<String> members) async {
     DateTime now = DateTime.now();
     DateTime startOfMonth = DateTime(now.year, now.month, 1);
 
     List<Map<String, dynamic>> leaderboard = [];
 
     for (String user in members) {
-    int totalDuration = 0;
-    final userActivitiesRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(user)
-        .collection('activities');
+      int totalDuration = 0;
+      final userActivitiesRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user)
+          .collection('activities');
 
-    final snapshot = await userActivitiesRef
-        .where('timestamp', isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch)
-        .get();
+      final snapshot = await userActivitiesRef
+          .where('timestamp', isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch)
+          .get();
 
-    for (var doc in snapshot.docs) {
-      final data = doc.data();
-      final activityCategory = (data['category'] ?? '').toString().toLowerCase();
-      final duration = (data['duration'] as num?)?.toInt() ?? 0;
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final duration = (data['duration'] as num?)?.toInt() ?? 0;
+        final groupIds = List<String>.from(data['groupIds'] ?? []);
 
-      final normalizedGroupCategory = category.toLowerCase();
-      final normalizedSubCategory = subcategory.toLowerCase();
-
-      final isMatch = normalizedSubCategory.isNotEmpty && normalizedSubCategory != 'keiner'
-          ? activityCategory == normalizedSubCategory
-          : activityCategory == normalizedGroupCategory;
-
-      if (isMatch) {
-        totalDuration += duration;
+        if (groupIds.contains(groupId)) {
+          totalDuration += duration;
+        }
       }
 
-      print("🔍 [$user] Kategorie: $activityCategory | Dauer: $duration | Match: $isMatch");
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user).get();
+      final username = userDoc.data()?['username'] ?? 'Unbekannt';
+
+      leaderboard.add({
+        'user': username,
+        'valueMonthly': totalDuration,
+      });
     }
-
-    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user).get();
-    final username = userDoc.data()?['username'] ?? 'Unbekannt';
-
-    leaderboard.add({
-      'user': username,
-      'valueMonthly': totalDuration,
-    });
-  }
-
 
     return leaderboard;
   }
@@ -318,61 +308,52 @@ class GroupDetailScreen extends StatelessWidget {
       ),
     );
   }
-  Future<Map<String, dynamic>?> _getLatestActivityInfo(List<String> members, String category, String subcategory) async {
-  DateTime now = DateTime.now();
-  DateTime startOfMonth = DateTime(now.year, now.month, 1);
+  Future<Map<String, dynamic>?> _getLatestActivityInfo(List<String> members) async {
+    DateTime now = DateTime.now();
+    DateTime startOfMonth = DateTime(now.year, now.month, 1);
 
-  Map<String, dynamic>? latestActivity;
-  DateTime? latestTimestamp;
+    Map<String, dynamic>? latestActivity;
+    DateTime? latestTimestamp;
 
-  final normalizedGroupCategory = category.toLowerCase();
-  final normalizedSubcategory = subcategory.toLowerCase();
+    for (String userId in members) {
+      final activitiesRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .collection('activities');
 
-  for (String userId in members) {
-    final activitiesRef = FirebaseFirestore.instance
-        .collection('users')
-        .doc(userId)
-        .collection('activities');
+      final snapshot = await activitiesRef
+          .where('timestamp', isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch)
+          .orderBy('timestamp', descending: true)
+          .get();
 
-    final snapshot = await activitiesRef
-        .where('timestamp', isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch)
-        .orderBy('timestamp', descending: true)
-        .get();
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final duration = (data['duration'] as num?)?.toInt() ?? 0;
+        final groupIds = List<String>.from(data['groupIds'] ?? []);
+        final rawTimestamp = data['timestamp'];
+        final timestamp = rawTimestamp is int
+            ? DateTime.fromMillisecondsSinceEpoch(rawTimestamp)
+            : null;
 
-    for (var doc in snapshot.docs) {
-      final data = doc.data();
-      final activityCategory = (data['category'] ?? '').toString().toLowerCase();
-      final duration = (data['duration'] as num?)?.toInt() ?? 0;
+        if (groupIds.contains(groupId) && timestamp != null) {
+          if (latestTimestamp == null || timestamp.isAfter(latestTimestamp)) {
+            final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+            final username = userDoc.data()?['username'] ?? 'Unbekannt';
 
-      final rawTimestamp = data['timestamp'];
-      final timestamp = rawTimestamp is int
-          ? DateTime.fromMillisecondsSinceEpoch(rawTimestamp)
-          : null;
+            latestActivity = {
+              'username': username,
+              'timestamp': timestamp,
+              'duration': duration,
+            };
 
-      final isMatching = normalizedSubcategory.isNotEmpty && normalizedSubcategory != 'keiner'
-          ? activityCategory == normalizedSubcategory
-          : activityCategory == normalizedGroupCategory;
-
-      if (isMatching && timestamp != null) {
-        if (latestTimestamp == null || timestamp.isAfter(latestTimestamp)) {
-          // Hole Username des Users
-          final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-          final username = userDoc.data()?['username'] ?? 'Unbekannt';
-
-          latestActivity = {
-            'username': username,
-            'timestamp': timestamp,
-            'duration': duration,
-          };
-
-          latestTimestamp = timestamp;
+            latestTimestamp = timestamp;
+          }
         }
       }
     }
-  }
 
-  return latestActivity;
-}
+    return latestActivity;
+  }
 
   void _showAddMemberDialog(BuildContext context, bool isAdmin) {
     showDialog(
