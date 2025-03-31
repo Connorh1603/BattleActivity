@@ -200,14 +200,20 @@ class GroupDetailScreen extends StatelessWidget {
 
   Future<List<Map<String, dynamic>>> _getLeaderboardData(List<String> members, String category, String subcategory) async {
     DateTime now = DateTime.now();
-    DateTime oneMonthAgo = DateTime(now.year, now.month - 1, now.day);
+    DateTime startOfMonth = DateTime(now.year, now.month, 1);
 
     List<Map<String, dynamic>> leaderboard = [];
 
     for (String user in members) {
       int totalDuration = 0;
-      final userActivitiesRef = FirebaseFirestore.instance.collection('users').doc(user).collection('activities');
-      final snapshot = await userActivitiesRef.where('timestamp', isGreaterThanOrEqualTo: oneMonthAgo).get();
+      final userActivitiesRef = FirebaseFirestore.instance
+          .collection('users')
+          .doc(user)
+          .collection('activities');
+
+      final snapshot = await userActivitiesRef
+          .where('timestamp', isGreaterThanOrEqualTo: startOfMonth)
+          .get();
 
       for (var doc in snapshot.docs) {
         final data = doc.data();
@@ -224,14 +230,19 @@ class GroupDetailScreen extends StatelessWidget {
           }
         }
       }
+
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user).get();
       final username = userDoc.data()?['username'] ?? 'Unbekannt';
 
-      leaderboard.add({'user': username, 'valueMonthly': totalDuration});
+      leaderboard.add({
+        'user': username,
+        'valueMonthly': totalDuration,
+      });
     }
 
     return leaderboard;
   }
+
 
   Future<void> _leaveGroup() async {
     final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
