@@ -257,40 +257,44 @@ class GroupDetailScreen extends StatelessWidget {
     List<Map<String, dynamic>> leaderboard = [];
 
     for (String user in members) {
-      int totalDuration = 0;
-      final userActivitiesRef = FirebaseFirestore.instance
-          .collection('users')
-          .doc(user)
-          .collection('activities');
+    int totalDuration = 0;
+    final userActivitiesRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user)
+        .collection('activities');
 
-      final snapshot = await userActivitiesRef
-          .where('timestamp', isGreaterThanOrEqualTo: startOfMonth)
-          .get();
+    final snapshot = await userActivitiesRef
+        .where('timestamp', isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch)
+        .get();
 
-      for (var doc in snapshot.docs) {
-        final data = doc.data();
-        final activityCategory = data['category'];
-        final duration = (data['duration'] as num?)?.toInt() ?? 0;
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+      final activityCategory = (data['category'] ?? '').toString().toLowerCase();
+      final duration = (data['duration'] as num?)?.toInt() ?? 0;
 
-        if (subcategory.isNotEmpty && subcategory != 'Keiner') {
-          if (activityCategory == subcategory) {
-            totalDuration += duration;
-          }
-        } else {
-          if (activityCategory == category) {
-            totalDuration += duration;
-          }
-        }
+      final normalizedGroupCategory = category.toLowerCase();
+      final normalizedSubCategory = subcategory.toLowerCase();
+
+      final isMatch = normalizedSubCategory.isNotEmpty && normalizedSubCategory != 'keiner'
+          ? activityCategory == normalizedSubCategory
+          : activityCategory == normalizedGroupCategory;
+
+      if (isMatch) {
+        totalDuration += duration;
       }
 
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user).get();
-      final username = userDoc.data()?['username'] ?? 'Unbekannt';
-
-      leaderboard.add({
-        'user': username,
-        'valueMonthly': totalDuration,
-      });
+      print("🔍 [$user] Kategorie: $activityCategory | Dauer: $duration | Match: $isMatch");
     }
+
+    final userDoc = await FirebaseFirestore.instance.collection('users').doc(user).get();
+    final username = userDoc.data()?['username'] ?? 'Unbekannt';
+
+    leaderboard.add({
+      'user': username,
+      'valueMonthly': totalDuration,
+    });
+  }
+
 
     return leaderboard;
   }
@@ -319,7 +323,7 @@ class GroupDetailScreen extends StatelessWidget {
   DateTime startOfMonth = DateTime(now.year, now.month, 1);
 
   Map<String, dynamic>? latestActivity;
-  Timestamp? latestTimestamp;
+  DateTime? latestTimestamp;
 
   final normalizedGroupCategory = category.toLowerCase();
   final normalizedSubcategory = subcategory.toLowerCase();
@@ -331,7 +335,7 @@ class GroupDetailScreen extends StatelessWidget {
         .collection('activities');
 
     final snapshot = await activitiesRef
-        .where('timestamp', isGreaterThanOrEqualTo: startOfMonth)
+        .where('timestamp', isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch)
         .orderBy('timestamp', descending: true)
         .get();
 
@@ -339,23 +343,28 @@ class GroupDetailScreen extends StatelessWidget {
       final data = doc.data();
       final activityCategory = (data['category'] ?? '').toString().toLowerCase();
       final duration = (data['duration'] as num?)?.toInt() ?? 0;
-      final timestamp = data['timestamp'] as Timestamp?;
+
+      final rawTimestamp = data['timestamp'];
+      final timestamp = rawTimestamp is int
+          ? DateTime.fromMillisecondsSinceEpoch(rawTimestamp)
+          : null;
 
       final isMatching = normalizedSubcategory.isNotEmpty && normalizedSubcategory != 'keiner'
           ? activityCategory == normalizedSubcategory
           : activityCategory == normalizedGroupCategory;
 
       if (isMatching && timestamp != null) {
-        if (latestTimestamp == null || timestamp.toDate().isAfter(latestTimestamp.toDate())) {
+        if (latestTimestamp == null || timestamp.isAfter(latestTimestamp)) {
           // Hole Username des Users
           final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
           final username = userDoc.data()?['username'] ?? 'Unbekannt';
 
           latestActivity = {
             'username': username,
-            'timestamp': timestamp.toDate(),
+            'timestamp': timestamp,
             'duration': duration,
           };
+
           latestTimestamp = timestamp;
         }
       }
