@@ -618,7 +618,7 @@ class _GroupSelectionDialogState extends State<GroupSelectionDialog> {
     final userId = widget.auth.currentUser?.uid;
     if (userId == null) return;
 
-    final groupsRef = widget.firestore.collection('groups');
+    final groupsRef = widget.firestore.collection('Groups');
     final querySnapshot = await groupsRef.where('members', arrayContains: userId).get();
 
     setState(() {
