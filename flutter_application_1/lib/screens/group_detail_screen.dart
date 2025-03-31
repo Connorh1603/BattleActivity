@@ -11,9 +11,8 @@ class GroupDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     print("DEBUG: Benutzername im Detail-Screen: $username");
-    
+
     return Scaffold(
       appBar: AppBar(title: Text('Gruppendetails')),
       body: FutureBuilder<DocumentSnapshot>(
@@ -29,6 +28,7 @@ class GroupDetailScreen extends StatelessWidget {
           final groupData = snapshot.data!;
           final groupName = groupData['name'] ?? 'Unbekannte Gruppe';
           final groupType = groupData['typ'] ?? 'Kein Typ';
+          final groupSubType = groupData['subtyp'] ?? '';
           final adminId = groupData['admin'] ?? '';
           final members = List<String>.from(groupData['members'] ?? []);
           final isAdmin = username == adminId;
@@ -38,15 +38,10 @@ class GroupDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  groupName,
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
+                Text(groupName, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
-                Text(
-                  "Typ: $groupType",
-                  style: TextStyle(fontSize: 18, color: Colors.grey),
-                ),
+                Text("Typ: $groupType - ${groupSubType.isEmpty ? "Keiner" : groupSubType}",
+                    style: TextStyle(fontSize: 18, color: Colors.grey)),
                 SizedBox(height: 16),
                 Text("Mitglieder:", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
@@ -54,9 +49,33 @@ class GroupDetailScreen extends StatelessWidget {
                   child: ListView.builder(
                     itemCount: members.length,
                     itemBuilder: (context, index) {
-                      return ListTile(
-                        leading: Icon(Icons.person),
-                        title: Text(members[index]),
+                      return FutureBuilder<DocumentSnapshot>(
+                        future: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(members[index])
+                            .get(),
+                        builder: (context, userSnapshot) {
+                          if (userSnapshot.connectionState == ConnectionState.waiting) {
+                            return ListTile(
+                              leading: Icon(Icons.person),
+                              title: Text("Lade..."),
+                            );
+                          }
+
+                          if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                            return ListTile(
+                              leading: Icon(Icons.person),
+                              title: Text("Unbekannt"),
+                            );
+                          }
+
+                          final username = userSnapshot.data!.get('username') ?? 'Unbekannt';
+
+                          return ListTile(
+                            leading: Icon(Icons.person),
+                            title: Text(username),
+                          );
+                        },
                       );
                     },
                   ),
@@ -66,7 +85,7 @@ class GroupDetailScreen extends StatelessWidget {
                 SizedBox(height: 8),
                 Expanded(
                   child: FutureBuilder<List<Map<String, dynamic>>>(
-                    future: _getLeaderboardData(members),
+                    future: _getLeaderboardData(members, groupType, groupSubType),
                     builder: (context, leaderboardSnapshot) {
                       if (leaderboardSnapshot.connectionState == ConnectionState.waiting) {
                         return Center(child: CircularProgressIndicator());
@@ -76,25 +95,26 @@ class GroupDetailScreen extends StatelessWidget {
                       }
 
                       final leaderboardData = leaderboardSnapshot.data!;
+                      final maxY = leaderboardData
+                          .map((e) => (e['valueMonthly'] as num?)?.toDouble() ?? 0.0)
+                          .fold<double>(0.0, (a, b) => a > b ? a : b);
 
                       return BarChart(
                         BarChartData(
                           alignment: BarChartAlignment.spaceBetween,
-                          maxY: leaderboardData.isNotEmpty
-                              ? leaderboardData.map((e) => e['valueMonthly'] as double).reduce((a, b) => a > b ? a : b)
-                              : 100,
+                          maxY: maxY,
                           barGroups: leaderboardData.asMap().entries.map((entry) {
                             final index = entry.key;
                             final user = entry.value;
 
                             return BarChartGroupData(
                               x: index,
-                              barsSpace: 12,  // Vergrößert den Abstand zwischen den Balken
+                              barsSpace: 12,
                               barRods: [
                                 BarChartRodData(
-                                  toY: user['valueMonthly'].toDouble(),
+                                  toY: (user['valueMonthly'] as num).toDouble(),
                                   color: Colors.blue,
-                                  width: 20,  // Balkenbreite reduziert für besseren Abstand
+                                  width: 20,
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ],
@@ -105,12 +125,8 @@ class GroupDetailScreen extends StatelessWidget {
                               sideTitles: SideTitles(
                                 showTitles: true,
                                 reservedSize: 50,
-                                getTitlesWidget: (value, meta) {
-                                  return Text(
-                                    value.toInt().toString(),
-                                    style: TextStyle(fontSize: 12),
-                                  );
-                                },
+                                getTitlesWidget: (value, meta) =>
+                                    Text(value.toInt().toString(), style: TextStyle(fontSize: 12)),
                               ),
                             ),
                             bottomTitles: AxisTitles(
@@ -122,20 +138,13 @@ class GroupDetailScreen extends StatelessWidget {
                                   final userName = leaderboardData[value.toInt()]['user'];
                                   return Padding(
                                     padding: const EdgeInsets.only(top: 8.0),
-                                    child: Text(
-                                      userName,
-                                      style: TextStyle(fontSize: 14),
-                                    ),
+                                    child: Text(userName, style: TextStyle(fontSize: 14)),
                                   );
                                 },
                               ),
                             ),
-                            topTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
-                            rightTitles: AxisTitles(
-                              sideTitles: SideTitles(showTitles: false),
-                            ),
+                            topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                            rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                           ),
                           gridData: FlGridData(show: true),
                           borderData: FlBorderData(show: false),
@@ -152,10 +161,15 @@ class GroupDetailScreen extends StatelessWidget {
                       await _leaveGroup();
                       Navigator.pop(context);
                     },
-                    child: Text(
-                      "Gruppe Verlassen",
-                      style: TextStyle(color: Colors.red, fontSize: 18),
-                    ),
+                    child: Text("Gruppe Verlassen", style: TextStyle(color: Colors.red, fontSize: 18)),
+                  ),
+                ),
+                SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.center,
+                  child: TextButton(
+                    onPressed: () => _showAddMemberDialog(context, isAdmin),
+                    child: Text("Mitglied hinzufügen", style: TextStyle(color: Colors.green, fontSize: 18)),
                   ),
                 ),
                 SizedBox(height: 8),
@@ -163,20 +177,6 @@ class GroupDetailScreen extends StatelessWidget {
                   alignment: Alignment.center,
                   child: TextButton(
                     onPressed: () async {
-                      _showAddMemberDialog(context, isAdmin);
-                    },
-                    child: Text(
-                      "Mitglied hinzufügen",
-                      style: TextStyle(color: Colors.green, fontSize: 18),
-                    ),
-                  ),
-                ),
-                SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.center,
-                  child: TextButton(
-                    onPressed: () async {
-                      // Prüfen, ob der Nutzer Admin ist
                       final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
                       final groupSnapshot = await groupRef.get();
                       final adminId = groupSnapshot['admin'] ?? '';
@@ -187,10 +187,7 @@ class GroupDetailScreen extends StatelessWidget {
                         _showNotAdminMessage(context);
                       }
                     },
-                    child: Text(
-                      "Gruppennamen ändern",
-                      style: TextStyle(color: Colors.blue, fontSize: 18),
-                    ),
+                    child: Text("Gruppennamen ändern", style: TextStyle(color: Colors.blue, fontSize: 18)),
                   ),
                 ),
               ],
@@ -201,50 +198,39 @@ class GroupDetailScreen extends StatelessWidget {
     );
   }
 
-  /// Dialog zum Ändern des Gruppennamens
-  void _showChangeGroupNameDialog(BuildContext context) {
-    final TextEditingController nameController = TextEditingController();
+  Future<List<Map<String, dynamic>>> _getLeaderboardData(List<String> members, String category, String subcategory) async {
+    DateTime now = DateTime.now();
+    DateTime oneMonthAgo = DateTime(now.year, now.month - 1, now.day);
 
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Gruppennamen ändern"),
-          content: TextField(
-            controller: nameController,
-            decoration: InputDecoration(labelText: "Neuer Gruppenname"),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Abbrechen"),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                String newName = nameController.text.trim();
-                if (newName.isNotEmpty) {
-                  await _changeGroupName(newName);
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text("Gruppenname geändert!")),
-                  );
-                }
-              },
-              child: Text("Speichern"),
-            ),
-          ],
-        );
-      },
-    );
-  }
+    List<Map<String, dynamic>> leaderboard = [];
 
-  /// Gruppenname in Firestore ändern
-  Future<void> _changeGroupName(String newName) async {
-    final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
-    await groupRef.update({
-      'name': newName,
-    });
-    print("Gruppenname geändert auf: $newName");
+    for (String user in members) {
+      int totalDuration = 0;
+      final userActivitiesRef = FirebaseFirestore.instance.collection('users').doc(user).collection('activities');
+      final snapshot = await userActivitiesRef.where('timestamp', isGreaterThanOrEqualTo: oneMonthAgo).get();
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        final activityCategory = data['category'];
+        final duration = (data['duration'] as num?)?.toInt() ?? 0;
+
+        if (subcategory.isNotEmpty && subcategory != 'Keiner') {
+          if (activityCategory == subcategory) {
+            totalDuration += duration;
+          }
+        } else {
+          if (activityCategory == category) {
+            totalDuration += duration;
+          }
+        }
+      }
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user).get();
+      final username = userDoc.data()?['username'] ?? 'Unbekannt';
+
+      leaderboard.add({'user': username, 'valueMonthly': totalDuration});
+    }
+
+    return leaderboard;
   }
 
   Future<void> _leaveGroup() async {
@@ -255,42 +241,17 @@ class GroupDetailScreen extends StatelessWidget {
     print("$username hat die Gruppe verlassen.");
   }
 
-  Future<List<Map<String, dynamic>>> _getLeaderboardData(List<String> members) async {
-    final activitiesRef = FirebaseFirestore.instance.collection('Activities');
-    List<Future<Map<String, dynamic>>> futures = members.map((userId) async {
-      try {
-        QuerySnapshot activitySnapshot = await activitiesRef.where('user', isEqualTo: userId).get();
-        int valueMonthly = 0;
-        if (activitySnapshot.docs.isNotEmpty) {
-          valueMonthly = activitySnapshot.docs.first['valueMonthly'] ?? 0;
-        }
-        return {'user': userId, 'valueMonthly': valueMonthly};
-      } catch (e) {
-        print("Fehler beim Laden von $userId: $e");
-        return {'user': userId, 'valueMonthly': 0};
-      }
-    }).toList();
-    return await Future.wait(futures);
-  }
-  /// Meldung anzeigen, wenn kein Admin
-void _showNotAdminMessage(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (context) {
-      return AlertDialog(
+  void _showNotAdminMessage(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
         title: Text("Keine Berechtigung"),
         content: Text("Nur der Gruppenadmin kann den Gruppennamen ändern."),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("OK"),
-          ),
-        ],
-      );
-    },
-  );
-}
-  /// Dialog zum Hinzufügen von Mitgliedern
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text("OK"))],
+      ),
+    );
+  }
+
   void _showAddMemberDialog(BuildContext context, bool isAdmin) {
     showDialog(
       context: context,
@@ -309,9 +270,7 @@ void _showNotAdminMessage(BuildContext context) {
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: groupId));
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Gruppen-ID kopiert!")),
-                    );
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gruppen-ID kopiert!")));
                   },
                   child: Text("ID kopieren"),
                 ),
@@ -322,16 +281,47 @@ void _showNotAdminMessage(BuildContext context) {
           return AlertDialog(
             title: Text("Mitglied hinzufügen"),
             content: Text("Bitte frage den Gruppenadmin nach der Gruppen-ID."),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text("Verstanden"),
-              ),
-            ],
+            actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text("Verstanden"))],
           );
         }
       },
     );
   }
 
+  void _showChangeGroupNameDialog(BuildContext context) {
+    final TextEditingController nameController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Gruppennamen ändern"),
+          content: TextField(
+            controller: nameController,
+            decoration: InputDecoration(labelText: "Neuer Gruppenname"),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context), child: Text("Abbrechen")),
+            ElevatedButton(
+              onPressed: () async {
+                String newName = nameController.text.trim();
+                if (newName.isNotEmpty) {
+                  await _changeGroupName(newName);
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gruppenname geändert!")));
+                }
+              },
+              child: Text("Speichern"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _changeGroupName(String newName) async {
+    final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
+    await groupRef.update({'name': newName});
+    print("Gruppenname geändert auf: $newName");
+  }
 }
