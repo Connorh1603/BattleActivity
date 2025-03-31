@@ -22,7 +22,6 @@ class _ActivityScreenState extends State {
   String filterByCategory = ''; // Kein Filter standardmäßig
 
 
-  // activity_screen.dart (aktualisiert)
 Future _createOrUpdateActivity({
   String? activityId,
   required String title,
@@ -52,6 +51,8 @@ Future _createOrUpdateActivity({
         'timestamp': DateTime.now().millisecondsSinceEpoch,
         'updatedTimestamp': null,
         'userId': userId,
+        'imageUrl': '',
+        'groupIds': [],
       };
 
       if (fileBytes != null && fileName != null) {
@@ -70,6 +71,8 @@ Future _createOrUpdateActivity({
         'duration': duration,
         'category': category,
         'userId': userId,
+        'imageUrl': '',
+        'groupIds': [],
       };
 
       if (fileBytes != null && fileName != null) {
@@ -488,70 +491,86 @@ Widget build(BuildContext context) {
                   itemCount: filteredActivities.length,
                   itemBuilder: (context, index) {
                     final activity = filteredActivities[index];
-                    return Card(
-  elevation: 4,
-  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-  child: ListTile(
-    leading: ClipRRect(
-  borderRadius: BorderRadius.circular(8),
-  child: (activity['imageUrl'] ?? '').isNotEmpty
-      ? GestureDetector(
-          onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) {
-                return Dialog(
-                  child: InteractiveViewer(
-                    child: Image.network(
-                      activity['imageUrl'],
-                      fit: BoxFit.contain, // Zeigt das gesamte Bild an
-                      width: MediaQuery.of(context).size.width * 0.8, // Breite auf 80% des Bildschirms setzen
-                      height: MediaQuery.of(context).size.height * 0.6, // Höhe auf 60% des Bildschirms setzen
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-          child: Image.network(
-            activity['imageUrl'],
-            width: 50,
-            height: 50,
-            fit: BoxFit.cover,
-          ),
-        )
-      : Container(
-          width: 50,
-          height: 50,
-          color: Colors.grey[300],
-          child: const Icon(Icons.image, size: 24),
-        ),
-),
-    title: Text(activity['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-    subtitle: Text("${activity['category']} • ${activity['duration']} min"),
-    trailing: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          "Erstellt am: ${DateTime.fromMillisecondsSinceEpoch(activity['timestamp']).toString().split(' ').first}",
-          style: const TextStyle(fontSize: 12),
-        ),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.edit, color: Colors.blue),
-          onPressed: () => _showAddEditDialog(activityId: activity['id'], existingData: activity.cast<String, dynamic>()),
-        ),
-        const SizedBox(width: 8),
-        IconButton(
-          icon: const Icon(Icons.delete, color: Colors.red),
-          onPressed: () => _deleteActivity(activity['id']),
-        ),
-      ],
-    ),
-    onTap: () => _showActivityDetails(activity['id']),
-  ),
-);
 
+                    return Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      child: ListTile(
+                        leading: ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: (activity['imageUrl'] ?? '').isNotEmpty
+                              ? GestureDetector(
+                                  onTap: () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) {
+                                        return Dialog(
+                                          child: InteractiveViewer(
+                                            child: Image.network(
+                                              activity['imageUrl'],
+                                              fit: BoxFit.contain, // Zeigt das gesamte Bild an
+                                              width: MediaQuery.of(context).size.width * 0.8, // Breite auf 80% des Bildschirms setzen
+                                              height: MediaQuery.of(context).size.height * 0.6, // Höhe auf 60% des Bildschirms setzen
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    );
+                                  },
+                                  child: Image.network(
+                                    activity['imageUrl'],
+                                    width: 50,
+                                    height: 50,
+                                    fit: BoxFit.cover,
+                                  ),
+                                )
+                              : Container(
+                                  width: 50,
+                                  height: 50,
+                                  color: Colors.grey[300],
+                                  child: const Icon(Icons.image, size: 24),
+                                ),
+                        ),
+                        title: Text(activity['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text("${activity['category']} • ${activity['duration']} min"),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              "Erstellt am: ${DateTime.fromMillisecondsSinceEpoch(activity['timestamp']).toString().split(' ').first}",
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => _showAddEditDialog(activityId: activity['id'], existingData: activity.cast()),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => _deleteActivity(activity['id']),
+                            ),
+                            const SizedBox(width: 8),
+                            IconButton(
+                              icon: const Icon(Icons.more_vert),
+                              onPressed: () async {
+                                await showDialog(
+                                  context: context,
+                                  builder: (context) {
+                                    return GroupSelectionDialog(
+                                      activityId: activity['id'],
+                                      firestore: _firestore,
+                                      auth: _auth,
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                        onTap: () => _showActivityDetails(activity['id']),
+                      ),
+                    );
                   },
                 );
               },
@@ -566,3 +585,104 @@ Widget build(BuildContext context) {
     );
   }
 }
+
+//Gruppenauswahldialog
+class GroupSelectionDialog extends StatefulWidget {
+  final String activityId;
+  final FirebaseFirestore firestore;
+  final FirebaseAuth auth;
+
+  const GroupSelectionDialog({
+    super.key,
+    required this.activityId,
+    required this.firestore,
+    required this.auth,
+  });
+
+  @override
+  State<GroupSelectionDialog> createState() => _GroupSelectionDialogState();
+}
+
+class _GroupSelectionDialogState extends State<GroupSelectionDialog> {
+  List<String> _selectedGroupIds = [];
+  List<String> _availableGroupIds = [];
+  List<String> _availableGroupNames = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAvailableGroups();
+  }
+
+  Future<void> _loadAvailableGroups() async {
+    final userId = widget.auth.currentUser?.uid;
+    if (userId == null) return;
+
+    final groupsRef = widget.firestore.collection('groups');
+    final querySnapshot = await groupsRef.where('members', arrayContains: userId).get();
+
+    setState(() {
+      _availableGroupIds = querySnapshot.docs.map((doc) => doc.id).toList().cast<String>();
+      _availableGroupNames = querySnapshot.docs.map((doc) => doc.get('name')).toList().cast<String>();
+    });
+  }
+
+  Future<void> _saveGroupSelection() async {
+    final activityRef = widget.firestore.collection('users').doc(widget.auth.currentUser?.uid).collection('activities').doc(widget.activityId);
+
+    final docSnapshot = await activityRef.get();
+    if (docSnapshot.exists) {
+      final data = docSnapshot.data() as Map;
+      final existingGroupIds = data['groupIds'] ?? [];
+
+      final updatedGroupIds = [...existingGroupIds, ..._selectedGroupIds].toSet().toList();
+
+      await activityRef.update({
+        'groupIds': updatedGroupIds,
+      });
+    } else {
+      await activityRef.set({
+        'groupIds': _selectedGroupIds,
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Gruppen auswählen'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: _availableGroupIds.map((groupId) {
+          final groupName = _availableGroupNames[_availableGroupIds.indexOf(groupId)];
+          return CheckboxListTile(
+            title: Text(groupName),
+            value: _selectedGroupIds.contains(groupId),
+            onChanged: (value) {
+              setState(() {
+                if (value ?? false) {
+                  _selectedGroupIds.add(groupId);
+                } else {
+                  _selectedGroupIds.remove(groupId);
+                }
+              });
+            },
+          );
+        }).toList(),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Abbrechen'),
+        ),
+        ElevatedButton(
+          onPressed: _saveGroupSelection,
+          child: const Text('Speichern'),
+        ),
+      ],
+    );
+  }
+}
+
+
+
