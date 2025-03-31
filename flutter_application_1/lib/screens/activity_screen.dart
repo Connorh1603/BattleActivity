@@ -621,21 +621,38 @@ class _GroupSelectionDialogState extends State<GroupSelectionDialog> {
     final groupsRef = widget.firestore.collection('Groups');
     final querySnapshot = await groupsRef.where('members', arrayContains: userId).get();
 
+    final activityRef = widget.firestore
+        .collection('users')
+        .doc(userId)
+        .collection('activities')
+        .doc(widget.activityId);
+    final activitySnapshot = await activityRef.get();
+
+    List<String> existingGroupIds = [];
+    if (activitySnapshot.exists) {
+      final data = activitySnapshot.data() as Map<String, dynamic>;
+      existingGroupIds = List<String>.from(data['groupIds'] ?? []);
+    }
+
     setState(() {
-      _availableGroupIds = querySnapshot.docs.map((doc) => doc.id).toList().cast<String>();
-      _availableGroupNames = querySnapshot.docs.map((doc) => doc.get('name')).toList().cast<String>();
+      _availableGroupIds = querySnapshot.docs.map((doc) => doc.id).toList();
+      _availableGroupNames = querySnapshot.docs.map((doc) => doc.get('name') as String).toList();
+      _selectedGroupIds = existingGroupIds;
     });
-  }
+    }
+
 
   Future<void> _saveGroupSelection() async {
-    final activityRef = widget.firestore.collection('users').doc(widget.auth.currentUser?.uid).collection('activities').doc(widget.activityId);
+    final activityRef = widget.firestore
+        .collection('users')
+        .doc(widget.auth.currentUser?.uid)
+        .collection('activities')
+        .doc(widget.activityId);
 
     final docSnapshot = await activityRef.get();
     if (docSnapshot.exists) {
       final data = docSnapshot.data() as Map;
-      final existingGroupIds = data['groupIds'] ?? [];
-
-      final updatedGroupIds = [...existingGroupIds, ..._selectedGroupIds].toSet().toList();
+      final updatedGroupIds = _selectedGroupIds;
 
       await activityRef.update({
         'groupIds': updatedGroupIds,
@@ -645,7 +662,11 @@ class _GroupSelectionDialogState extends State<GroupSelectionDialog> {
         'groupIds': _selectedGroupIds,
       });
     }
+
+    // Dialog schließen nach erfolgreichem Speichern
+    if (mounted) Navigator.pop(context);
   }
+
 
   @override
   Widget build(BuildContext context) {

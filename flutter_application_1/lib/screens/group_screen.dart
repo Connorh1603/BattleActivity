@@ -62,11 +62,10 @@ class GroupScreen extends StatelessWidget {
                           final group = groups[index];
                           final groupName = group['name'] ?? 'Unbekannte Gruppe';
                           final groupType = group['typ'] ?? 'Kein Typ';
-                          final groupSubType = group['subtyp'] ?? 'Keiner';
 
                           return ListTile(
                             title: Text(groupName),
-                            subtitle: Text('$groupType - $groupSubType'),
+                            subtitle: Text(groupType),
                             onTap: () {
                               Navigator.push(
                                 context,
@@ -101,8 +100,6 @@ class GroupScreen extends StatelessWidget {
   void _showCreateGroupDialog(BuildContext context, String userId) {
     final TextEditingController nameController = TextEditingController();
     String? selectedCategory;
-    String? selectedSubCategory;
-    List<String> subCategories = ['Keiner'];
 
     showDialog(
       context: context,
@@ -136,31 +133,9 @@ class GroupScreen extends StatelessWidget {
                         onChanged: (value) {
                           setState(() {
                             selectedCategory = value;
-                            selectedSubCategory = 'Keiner'; 
-                            _loadSubCategories(value!).then((subs) {
-                              setState(() {
-                                subCategories = ['Keiner', ...subs];
-                              });
-                            });
                           });
                         },
                       );
-                    },
-                  ),
-                  DropdownButton<String>(
-                    value: selectedSubCategory,
-                    hint: Text("Subtyp auswählen"),
-                    isExpanded: true,
-                    items: subCategories.map((subtype) {
-                      return DropdownMenuItem<String>(
-                        value: subtype,
-                        child: Text(subtype),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        selectedSubCategory = value;
-                      });
                     },
                   ),
                 ],
@@ -172,7 +147,7 @@ class GroupScreen extends StatelessWidget {
                 ),
                 ElevatedButton(
                   onPressed: () {
-                    _createGroup(nameController.text, selectedCategory ?? "Kein Typ", selectedSubCategory ?? "Keiner", userId);
+                    _createGroup(nameController.text, selectedCategory ?? "Kein Typ", userId);
                     Navigator.pop(context);
                   },
                   child: Text("Erstellen"),
@@ -185,23 +160,12 @@ class GroupScreen extends StatelessWidget {
     );
   }
 
-  Future<List<String>> _loadSubCategories(String category) async {
-    final snapshot = await FirebaseFirestore.instance
-        .collection('Categories')
-        .doc(category)
-        .collection('sub-categories')
-        .get();
-
-    return snapshot.docs.map((doc) => doc.id).toList();
-  }
-
-  void _createGroup(String name, String type, String subType, String userId) {
+  void _createGroup(String name, String type, String userId) {
     if (name.isEmpty || type.isEmpty) return;
 
     FirebaseFirestore.instance.collection('Groups').add({
       'name': name,
       'typ': type,
-      'subtyp': subType,
       'members': [userId],
       'admin': userId,
     }).then((value) {

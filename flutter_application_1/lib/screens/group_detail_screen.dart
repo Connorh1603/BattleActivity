@@ -28,7 +28,6 @@ class GroupDetailScreen extends StatelessWidget {
           final groupData = snapshot.data!;
           final groupName = groupData['name'] ?? 'Unbekannte Gruppe';
           final groupType = groupData['typ'] ?? 'Kein Typ';
-          final groupSubType = groupData['subtyp'] ?? '';
           final adminId = groupData['admin'] ?? '';
           final members = List<String>.from(groupData['members'] ?? []);
           final isAdmin = username == adminId;
@@ -39,9 +38,6 @@ class GroupDetailScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(groupName, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                SizedBox(height: 8),
-                Text("Typ: $groupType - ${groupSubType.isEmpty ? "Keiner" : groupSubType}",
-                    style: TextStyle(fontSize: 18, color: Colors.grey)),
                 SizedBox(height: 16),
                 Text("Mitglieder:", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
