@@ -53,14 +53,14 @@ class GroupDetailScreen extends StatelessWidget {
                             .get(),
                         builder: (context, userSnapshot) {
                           if (userSnapshot.connectionState == ConnectionState.waiting) {
-                            return ListTile(
+                            return const ListTile(
                               leading: Icon(Icons.person),
                               title: Text("Lade..."),
                             );
                           }
 
                           if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-                            return ListTile(
+                            return const ListTile(
                               leading: Icon(Icons.person),
                               title: Text("Unbekannt"),
                             );
@@ -68,9 +68,17 @@ class GroupDetailScreen extends StatelessWidget {
 
                           final username = userSnapshot.data!.get('username') ?? 'Unbekannt';
 
-                          return ListTile(
-                            leading: Icon(Icons.person),
-                            title: Text(username),
+                          return Card(
+                            elevation: 3,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                            child: ListTile(
+                              leading: const Icon(Icons.person, size: 28),
+                              title: Text(
+                                username,
+                                style: const TextStyle(fontWeight: FontWeight.w500),
+                              ),
+                            ),
                           );
                         },
                       );

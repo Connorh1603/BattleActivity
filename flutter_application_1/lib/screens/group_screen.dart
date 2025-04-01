@@ -63,21 +63,28 @@ class GroupScreen extends StatelessWidget {
                           final groupName = group['name'] ?? 'Unbekannte Gruppe';
                           final groupType = group['typ'] ?? 'Kein Typ';
 
-                          return ListTile(
-                            title: Text(groupName),
-                            subtitle: Text(groupType),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => GroupDetailScreen(
-                                    groupId: group.id,
-                                    username: username,
-                                    userId : userId,
+                          return Card(
+                            elevation: 4,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                            child: ListTile(
+                              leading: const Icon(Icons.group, size: 32),
+                              title: Text(groupName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text(groupType),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => GroupDetailScreen(
+                                      groupId: group.id,
+                                      username: username,
+                                      userId: userId,
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           );
                         },
                       );
