@@ -8,7 +8,6 @@ class GroupScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Dynamisch die aktuelle Benutzer-ID holen
     final User? currentUser = FirebaseAuth.instance.currentUser;
     final String userId = currentUser?.uid ?? 'Unbekannt';
 
@@ -24,7 +23,6 @@ class GroupScreen extends StatelessWidget {
             return Center(child: Text("Benutzer nicht gefunden"));
           }
 
-          // Benutzername aus dem Dokument holen
           final String username = snapshot.data!.get('username') ?? 'Unbekannter Nutzer';
 
           return Center(
@@ -74,7 +72,8 @@ class GroupScreen extends StatelessWidget {
                                 MaterialPageRoute(
                                   builder: (context) => GroupDetailScreen(
                                     groupId: group.id,
-                                    username: username,  // Benutzername übergeben
+                                    username: username,
+                                    userId : userId,
                                   ),
                                 ),
                               );
@@ -85,44 +84,17 @@ class GroupScreen extends StatelessWidget {
                     },
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0),
-                  child: Column(
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/profile');
-                        },
-                        child: Text('Profile'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/archievement');
-                        },
-                        child: Text('Erfolge'),
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/activity');
-                        },
-                        child: Text('Aktivitäten'),
-                      ),
-                      SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: () {
-                          _showCreateGroupDialog(context, userId);
-                        },
-                        child: Text('Gruppe erstellen'),
-                      ),
-                      SizedBox(height: 10),
-                      ElevatedButton(
-                        onPressed: () {
-                          _showJoinGroupDialog(context, userId);
-                        },
-                        child: Text('Gruppe beitreten'),
-                      ),
-                    ],
-                  ),
+                ElevatedButton(
+                  onPressed: () {
+                    _showCreateGroupDialog(context, userId);
+                  },
+                  child: Text('Gruppe erstellen'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _showJoinGroupDialog(context, userId);
+                  },
+                  child: Text('Gruppe beitreten'),
                 ),
               ],
             ),
@@ -132,28 +104,80 @@ class GroupScreen extends StatelessWidget {
     );
   }
 
-  /// Dialog zum Erstellen einer neuen Gruppe
   void _showCreateGroupDialog(BuildContext context, String userId) {
     final TextEditingController nameController = TextEditingController();
-    final TextEditingController typeController = TextEditingController();
+    String? selectedCategory;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text("Neue Gruppe erstellen"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(labelText: "Gruppenname"),
+                  ),
+                  FutureBuilder<QuerySnapshot>(
+                    future: FirebaseFirestore.instance.collection('Categories').get(),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return CircularProgressIndicator();
+                      List<String> categories = snapshot.data!.docs.map((doc) => doc.id).toList();
+                      return DropdownButton<String>(
+                        value: selectedCategory,
+                        hint: Text("Kategorie auswählen"),
+                        isExpanded: true,
+                        items: categories.map((category) {
+                          return DropdownMenuItem<String>(
+                            value: category,
+                            child: Text(category),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            selectedCategory = value;
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text("Abbrechen"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _createGroup(nameController.text, selectedCategory ?? "Kein Typ", userId);
+                    Navigator.pop(context);
+                  },
+                  child: Text("Erstellen"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showJoinGroupDialog(BuildContext context, String userId) {
+    final TextEditingController groupIdController = TextEditingController();
 
     showDialog(
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text("Neue Gruppe erstellen"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: "Gruppenname"),
-              ),
-              TextField(
-                controller: typeController,
-                decoration: InputDecoration(labelText: "Gruppentyp"),
-              ),
-            ],
+          title: Text("Gruppe beitreten"),
+          content: TextField(
+            controller: groupIdController,
+            decoration: InputDecoration(labelText: "Gruppen-ID"),
           ),
           actions: [
             TextButton(
@@ -161,11 +185,24 @@ class GroupScreen extends StatelessWidget {
               child: Text("Abbrechen"),
             ),
             ElevatedButton(
-              onPressed: () {
-                _createGroup(nameController.text, typeController.text, userId);
-                Navigator.pop(context);
+              onPressed: () async {
+                final groupId = groupIdController.text.trim();
+                if (groupId.isNotEmpty) {
+                  final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
+                  final groupSnap = await groupRef.get();
+
+                  if (groupSnap.exists) {
+                    await groupRef.update({
+                      'members': FieldValue.arrayUnion([userId]),
+                    });
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gruppe beigetreten.")));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gruppe nicht gefunden.")));
+                  }
+                }
               },
-              child: Text("Erstellen"),
+              child: Text("Beitreten"),
             ),
           ],
         );
@@ -173,7 +210,7 @@ class GroupScreen extends StatelessWidget {
     );
   }
 
-  /// Neue Gruppe erstellen
+
   void _createGroup(String name, String type, String userId) {
     if (name.isEmpty || type.isEmpty) return;
 
@@ -184,87 +221,8 @@ class GroupScreen extends StatelessWidget {
       'admin': userId,
     }).then((value) {
       print("Gruppe erstellt mit ID: ${value.id}");
-      _checkAndCreateActivity(type, userId);
     }).catchError((error) {
       print("Fehler beim Erstellen der Gruppe: $error");
     });
-  }
-
-  /// Aktivität prüfen und ggf. erstellen
-  void _checkAndCreateActivity(String type, String userId) async {
-    final activitiesRef = FirebaseFirestore.instance.collection('Activities');
-    QuerySnapshot existingActivities = await activitiesRef.where('typ', isEqualTo: type).get();
-
-    if (existingActivities.docs.isEmpty) {
-      activitiesRef.add({
-        'typ': type,
-        'user': userId,
-        'valueMonthly': 0,
-        'valueFull': 0,
-      }).then((value) {
-        print("Neue Aktivität erstellt mit ID: ${value.id}");
-      }).catchError((error) {
-        print("Fehler beim Erstellen der Aktivität: $error");
-      });
-    } else {
-      print("Aktivität für Typ '$type' existiert bereits.");
-    }
-  }
-
-  /// Dialog zum Beitreten einer Gruppe über die Gruppen-ID
-  void _showJoinGroupDialog(BuildContext context, String userId) {
-    final TextEditingController idController = TextEditingController();
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Gruppe beitreten"),
-          content: TextField(
-            controller: idController,
-            decoration: InputDecoration(labelText: "Gruppen-ID eingeben"),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text("Abbrechen"),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                _joinGroup(idController.text, userId);
-                Navigator.pop(context);
-              },
-              child: Text("Beitreten"),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  /// Fügt den aktuellen Nutzer einer bestehenden Gruppe hinzu
-  void _joinGroup(String groupId, String userId) async {
-    if (groupId.isEmpty) return;
-
-    DocumentReference groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
-
-    // Prüfe, ob die Gruppe existiert
-    DocumentSnapshot groupSnapshot = await groupRef.get();
-
-    if (groupSnapshot.exists) {
-      final String groupType = groupSnapshot['typ'] ?? '';
-
-      // Füge den Nutzer zur Mitgliederliste hinzu
-      groupRef.update({
-        'members': FieldValue.arrayUnion([userId]),
-      }).then((_) {
-        print("Erfolgreich der Gruppe beigetreten!");
-        _checkAndCreateActivity(groupType, userId);
-      }).catchError((error) {
-        print("Fehler beim Beitreten der Gruppe: $error");
-      });
-    } else {
-      print("Gruppe mit dieser ID existiert nicht.");
-    }
   }
 }
