@@ -58,36 +58,26 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: FirebaseAuth.instance.authStateChanges(),
-      builder: (context, snapshot) {
-        if (snapshot.hasData) {
-          return MaterialApp(
-            title: 'Gamification App',
-            theme: ThemeData(primarySwatch: Colors.blue),
-            initialRoute: '/profile', // Navigiere zur Profile-Seite, wenn angemeldet
-            routes: {
-              '/profile': (context) => const ProfileScreen(),
-              '/archievement': (context) => const AchievementScreen(),
-              '/group': (context) => const GroupScreen(),
-              '/activity': (context) => const ActivityScreen(),
-            },
-          );
-        } else {
-          return MaterialApp(
-            title: 'Gamification App',
-            theme: ThemeData(primarySwatch: Colors.blue),
-            initialRoute: '/', // Navigiere zur Login-Seite, wenn nicht angemeldet
-            routes: {
-              '/': (context) => const LoginScreen(),
-              '/signup': (context) => const SignupScreen(),
-            },
-          );
-        }
-      },
-    );
-  }
+Widget build(BuildContext context) {
+  return StreamBuilder(
+    stream: FirebaseAuth.instance.authStateChanges(),
+    builder: (context, snapshot) {
+      return MaterialApp(
+        title: 'Gamification App',
+        theme: ThemeData(primarySwatch: Colors.blue),
+        initialRoute: snapshot.hasData ? '/profile' : '/', // Navigiere zur Profile-Seite, wenn angemeldet, sonst zur Login-Seite
+        routes: {
+          '/': (context) => const LoginScreen(),
+          '/signup': (context) => const SignupScreen(),
+          '/profile': (context) => const ProfileScreen(),
+          '/archievement': (context) => const AchievementScreen(),
+          '/group': (context) => const GroupScreen(),
+          '/activity': (context) => const ActivityScreen(),
+        },
+      );
+    },
+  );
+}
 }
 
 
