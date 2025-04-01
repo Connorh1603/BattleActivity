@@ -6,8 +6,9 @@ import 'package:flutter/services.dart';
 class GroupDetailScreen extends StatelessWidget {
   final String groupId;
   final String username;
+  final String userId;
 
-  const GroupDetailScreen({super.key, required this.groupId, required this.username});
+  const GroupDetailScreen({super.key, required this.groupId, required this.username, required this.userId});
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +31,7 @@ class GroupDetailScreen extends StatelessWidget {
           final groupType = groupData['typ'] ?? 'Kein Typ';
           final adminId = groupData['admin'] ?? '';
           final members = List<String>.from(groupData['members'] ?? []);
-          final isAdmin = username == adminId;
+          final isAdmin = userId == adminId;
 
           return Padding(
             padding: const EdgeInsets.all(16.0),
@@ -266,7 +267,11 @@ class GroupDetailScreen extends StatelessWidget {
       for (var doc in snapshot.docs) {
         final data = doc.data();
         final duration = (data['duration'] as num?)?.toInt() ?? 0;
-        final groupIds = List<String>.from(data['groupIds'] ?? []);
+        final rawGroupIds = data['groupIds'];
+        final groupIds = rawGroupIds is List
+            ? rawGroupIds.whereType<String>().toList()
+            : <String>[];
+
 
         if (groupIds.contains(groupId)) {
           totalDuration += duration;
@@ -325,7 +330,11 @@ class GroupDetailScreen extends StatelessWidget {
       for (var doc in snapshot.docs) {
         final data = doc.data();
         final duration = (data['duration'] as num?)?.toInt() ?? 0;
-        final groupIds = List<String>.from(data['groupIds'] ?? []);
+        final rawGroupIds = data['groupIds'];
+        final groupIds = rawGroupIds is List
+            ? rawGroupIds.whereType<String>().toList()
+            : <String>[];
+
         final rawTimestamp = data['timestamp'];
         final timestamp = rawTimestamp is int
             ? DateTime.fromMillisecondsSinceEpoch(rawTimestamp)

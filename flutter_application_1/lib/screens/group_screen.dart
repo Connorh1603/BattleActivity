@@ -73,6 +73,7 @@ class GroupScreen extends StatelessWidget {
                                   builder: (context) => GroupDetailScreen(
                                     groupId: group.id,
                                     username: username,
+                                    userId : userId,
                                   ),
                                 ),
                               );
@@ -88,6 +89,12 @@ class GroupScreen extends StatelessWidget {
                     _showCreateGroupDialog(context, userId);
                   },
                   child: Text('Gruppe erstellen'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _showJoinGroupDialog(context, userId);
+                  },
+                  child: Text('Gruppe beitreten'),
                 ),
               ],
             ),
@@ -159,6 +166,50 @@ class GroupScreen extends StatelessWidget {
       },
     );
   }
+
+  void _showJoinGroupDialog(BuildContext context, String userId) {
+    final TextEditingController groupIdController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Gruppe beitreten"),
+          content: TextField(
+            controller: groupIdController,
+            decoration: InputDecoration(labelText: "Gruppen-ID"),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Abbrechen"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final groupId = groupIdController.text.trim();
+                if (groupId.isNotEmpty) {
+                  final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
+                  final groupSnap = await groupRef.get();
+
+                  if (groupSnap.exists) {
+                    await groupRef.update({
+                      'members': FieldValue.arrayUnion([userId]),
+                    });
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gruppe beigetreten.")));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gruppe nicht gefunden.")));
+                  }
+                }
+              },
+              child: Text("Beitreten"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   void _createGroup(String name, String type, String userId) {
     if (name.isEmpty || type.isEmpty) return;
