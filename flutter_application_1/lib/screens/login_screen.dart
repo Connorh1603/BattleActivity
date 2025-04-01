@@ -36,86 +36,120 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   }
+  //Google Sign-In für Web
+  Future _signInWithGoogle() async {
+  try {
+    if (kIsWeb) {
+      // Initialisiere GoogleSignIn für Web
+      await _initializeGoogleSignIn();
 
-  Future<void> _signInWithGoogle() async {
-    try {
-      if (kIsWeb) {
-        // Initialisiere GoogleSignIn für Web
-        await _initializeGoogleSignIn();
+      final GoogleSignIn googleSignIn = GoogleSignIn();
 
-        final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
-        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-
-        if (googleUser == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Google sign-in cancelled by user')),
-          );
-          return;
-        }
-
-        final GoogleSignInAuthentication googleAuth =
-            await googleUser.authentication;
-
-        final OAuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
+      if (googleUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in cancelled by user')),
         );
+        return;
+      }
 
-        await FirebaseAuth.instance.signInWithCredential(credential);
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
-        // Überprüfe, ob die E-Mail-Adresse bereits existiert
-        final User? user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          if (user.emailVerified) {
-            Navigator.pushNamed(context, '/archievement');
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Please verify your email address.')),
-            );
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
+      // Überprüfe, ob die E-Mail-Adresse bereits existiert
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        if (user.emailVerified) {
+          // Generiere einen Standard-Benutzernamen
+          final String username = 'user_${user.uid.substring(0, 8)}';
+
+          // Überprüfe, ob der Benutzer bereits in Firestore existiert
+          final FirebaseFirestore firestore = FirebaseFirestore.instance;
+          final DocumentSnapshot doc = await firestore.collection('users').doc(user.uid).get();
+          if (!doc.exists) {
+            // Benutzer in Firestore anlegen
+            await firestore.collection('users').doc(user.uid).set({
+              'firstName': '', // Leere Zeichenfolge für Firstname
+              'lastName': '', // Leere Zeichenfolge für Lastname
+              'username': username,
+              'email': user.email,
+              'profilePictureUrl': '',
+            });
           }
-        }
-      } else {
-        // Mobile Implementierung bleibt unverändert
-        final GoogleSignIn googleSignIn = GoogleSignIn();
 
-        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-
-        if (googleUser == null) {
+          Navigator.pushNamed(context, '/archievement');
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Google sign-in cancelled by user')),
+            SnackBar(content: Text('Please verify your email address.')),
           );
-          return;
-        }
-
-        final GoogleSignInAuthentication googleAuth =
-            await googleUser.authentication;
-
-        final OAuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-
-        await FirebaseAuth.instance.signInWithCredential(credential);
-
-        // Überprüfe, ob die E-Mail-Adresse bereits existiert
-        final User? user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          if (user.emailVerified) {
-            Navigator.pushNamed(context, '/archievement');
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Please verify your email address.')),
-            );
-          }
         }
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google sign-in failed: $e')),
+    } else {
+      // Mobile Implementierung bleibt unverändert
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in cancelled by user')),
+        );
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
+
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
+      // Überprüfe, ob die E-Mail-Adresse bereits existiert
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        if (user.emailVerified) {
+          // Generiere einen Standard-Benutzernamen
+          final String username = 'user_${user.uid.substring(0, 8)}';
+
+          // Überprüfe, ob der Benutzer bereits in Firestore existiert
+          final FirebaseFirestore firestore = FirebaseFirestore.instance;
+          final DocumentSnapshot doc = await firestore.collection('users').doc(user.uid).get();
+          if (!doc.exists) {
+            // Benutzer in Firestore anlegen
+            await firestore.collection('users').doc(user.uid).set({
+              'firstName': '', // Leere Zeichenfolge für Firstname
+              'lastName': '', // Leere Zeichenfolge für Lastname
+              'username': username,
+              'email': user.email,
+              'profilePictureUrl': '',
+            });
+          }
+
+          Navigator.pushNamed(context, '/archievement');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Please verify your email address.')),
+          );
+        }
+      }
     }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Google sign-in failed: $e')),
+    );
   }
+}
 
   Future<void> _loginWithUsernameAndPassword() async {
     try {
@@ -142,7 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (userCredential.user?.emailVerified ?? false) {
-        Navigator.pushNamed(context, '/archievement');
+        Navigator.pushNamed(context, '/profile');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Please verify your email address before logging in.')),
@@ -214,6 +248,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           labelText: 'Username',
                           border: OutlineInputBorder(),
                         ),
+                        onSubmitted: (value) => _loginWithUsernameAndPassword(),
                       ),
                       SizedBox(height: 10),
                       TextField(
@@ -223,6 +258,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           border: OutlineInputBorder(),
                         ),
                         obscureText: true,
+                        onSubmitted: (value) => _loginWithUsernameAndPassword(),
                       ),
                       TextButton(
                         onPressed: _resetPassword,
