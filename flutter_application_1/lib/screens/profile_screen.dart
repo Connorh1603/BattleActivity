@@ -271,37 +271,57 @@ Widget build(BuildContext context) {
                 SizedBox(height: 20),
                 // Rewards-Bereich
                 Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey),
-                  ),
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Rewards", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 10),
-                      StreamBuilder(
-                        stream: _firestore.collection('rewards').where('userId', isEqualTo: _auth.currentUser?.uid).snapshots(),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData) {
-                            if (snapshot.data!.docs.isEmpty) {
-                              return Center(child: Text("No rewards found"));
-                            }
-                            return ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: snapshot.data!.docs.length,
-                              itemBuilder: (context, index) {
-                                final reward = snapshot.data!.docs[index];
-                                return ListTile(
-                                  title: Text(reward.get('name')),
-                                  subtitle: Text(reward.get('description')),
-                                  trailing: Text("${reward.get('points')} Points"),
-                                );
-                              },
-                            );
-                          } else {
-                            return Center(child: CircularProgressIndicator());
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey),
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Rewards", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  SizedBox(height: 10),
+                 StreamBuilder(
+                    stream: _firestore.collection('users').doc(_auth.currentUser?.uid).snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        final userData = snapshot.data!.data();
+                        if (userData != null && userData.containsKey('achievements')) {
+                          final achievements = userData['achievements'] as List<dynamic>;
+                          if (achievements.isEmpty) {
+                            return Center(child: Text("No rewards found"));
+                          }
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: achievements.length,
+                            itemBuilder: (context, index) {
+                              final achievement = achievements[index] as Map<String, dynamic>;
+                  return Container(
+                    margin: const EdgeInsets.symmetric(vertical: 8.0),
+                    padding: const EdgeInsets.all(12.0),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(achievement['name'], style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                        Image.asset(
+                          '${achievement['badge'].toLowerCase()}.png',
+                          width: 50,
+                          height: 50,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              );
+            } else {
+                          return Center(child: Text("No rewards found"));
+                        }
+                      } else {
+                        return Center(child: CircularProgressIndicator());
                           }
                         },
                       ),

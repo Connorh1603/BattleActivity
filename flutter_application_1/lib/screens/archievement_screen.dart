@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:percent_indicator/percent_indicator.dart';
 
 class Achievement {
   final String name;
@@ -68,12 +69,17 @@ class _AchievementScreenState extends State<AchievementScreen> {
         .collection('activities')
         .get();
     
-    int totalLearningHours = 0;
+    int totalLearningMinutes = 0;
     int totalFitnessSessions = 0;
     int totalRuns = 0;
     int learningSessions = 0;
     int fitnessSessions = 0;
     int runningSessions = 0;
+    int totalFreetime = 0;
+    int freetimeSessions = 0;
+    int totalMusicMinutes = 0;
+    int musicSessions = 0;
+
 
     for (var doc in activitiesSnapshot.docs) {
       final data = doc.data();
@@ -81,25 +87,35 @@ class _AchievementScreenState extends State<AchievementScreen> {
       final int duration = data['duration'] ?? 0;
 
       if (category == 'Lernen') {
-        totalLearningHours += duration;
+        totalLearningMinutes += duration;
         learningSessions += 1;
-      } else if (category == 'Fitness') {
+      } else if (category == 'Sport') {
         totalFitnessSessions += duration;
         fitnessSessions += 1;
       } else if (category == 'Laufen') {
         totalRuns += duration;
         runningSessions += 1;
+      } else if (category == 'Freizeit') {
+        totalFreetime += duration;
+        freetimeSessions += 1;
+      } else if (category == 'Musik') {
+        totalMusicMinutes += duration;
+        musicSessions += 1;
       }
     }
     
     setState(() {
       achievements = [
-        _createAchievement('Gelernte Stunden', totalLearningHours, 100, Icons.school),
-        _createAchievement('Lern-Sessions', learningSessions, 50, Icons.menu_book),
-        _createAchievement('Fitness Freak', totalFitnessSessions, 10, Icons.fitness_center),
+        _createAchievement('Gelernte Minuten', totalLearningMinutes, 600, Icons.school),
+        _createAchievement('Lern-Sessions', learningSessions, 20, Icons.menu_book),
+        _createAchievement('Fitness Freak', totalFitnessSessions, 600, Icons.fitness_center),
         _createAchievement('Workouts absolviert', fitnessSessions, 20, Icons.sports_gymnastics),
-        _createAchievement('Lauflegende', totalRuns, 50, Icons.directions_run),
-        _createAchievement('Läufe abgeschlossen', runningSessions, 30, Icons.run_circle),
+        _createAchievement('Lauflegende', totalRuns, 600, Icons.directions_run),
+        _createAchievement('Läufe abgeschlossen', runningSessions, 20, Icons.run_circle),
+        _createAchievement('Freiheit', totalFreetime, 600, Icons.event_available),
+        _createAchievement('Am Chillen', freetimeSessions, 20, Icons.timelapse),
+        _createAchievement('Neuer Mozart', totalMusicMinutes, 600, Icons.piano),
+        _createAchievement('Musik gespielt', musicSessions, 20, Icons.library_music),
       ];
     });
 
@@ -111,16 +127,22 @@ class _AchievementScreenState extends State<AchievementScreen> {
     String badge = 'Loser';
     int goal = baseGoal;
 
-    if (current >= baseGoal * 4) {
+    if (current >= baseGoal * 20) {
+      badge = 'Diamant';
+      goal = baseGoal * 30;
+    } else if (current >= baseGoal * 12) {
+      badge = 'Platin';
+      goal = baseGoal * 20;
+    } else if (current >= baseGoal * 6) {
       badge = 'Gold';
-      goal = baseGoal * 8;
+      goal = baseGoal * 12;
     } else if (current >= baseGoal * 2) {
       badge = 'Silber';
-      goal = baseGoal * 4;
+      goal = baseGoal * 6;
     } else if (current >= baseGoal) {
       badge = 'Bronze';
       goal = baseGoal * 2;
-    }
+    } 
     
     return Achievement(name: name, current: current, goal: goal, badge: badge,  icon: icon,);
   }
@@ -163,13 +185,23 @@ class _AchievementScreenState extends State<AchievementScreen> {
                               children: [
                                 Text(achievement.name, style: const TextStyle(fontWeight: FontWeight.bold)),
                                 Text("${achievement.current}/${achievement.goal} ${achievement.badge.isNotEmpty ? '- ${achievement.badge} Abzeichen' : ''}", style: TextStyle(color: Colors.grey[700])),
-                                LinearProgressIndicator(
-                                  value: achievement.progress,
-                                  backgroundColor: Colors.grey[300],
-                                  color: Colors.deepPurple,
+                                CircularPercentIndicator(
+                                  radius: 30.0,
+                                  lineWidth: 6.0,
+                                  percent: achievement.progress,
+                                  center: Text("${(achievement.progress * 100).toInt()}%"),
+                                  progressColor: Colors.deepPurple,
+                                  backgroundColor: Colors.grey[300]!,
+                                  circularStrokeCap: CircularStrokeCap.round,
                                 ),
                               ],
                             ),
+                          ),
+                          const SizedBox(width: 12),
+                          Image.asset(
+                            '${achievement.badge}.png',
+                            width: 80,
+                            height: 80,
                           ),
                         ],
                       ),
