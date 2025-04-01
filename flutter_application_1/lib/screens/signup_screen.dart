@@ -60,6 +60,28 @@ class _SignupScreenState extends State<SignupScreen> {
   }
 
   Future<void> _createUser() async {
+
+     if (_usernameController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Username is required.')),
+    );
+    return;
+  }
+
+  if (_emailController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Email is required.')),
+    );
+    return;
+  }
+
+  if (_passwordController.text.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Password is required.')),
+    );
+    return;
+  }
+
     if (_passwordController.text.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('The password must be at least 6 characters long.'),
@@ -159,7 +181,7 @@ class _SignupScreenState extends State<SignupScreen> {
             SnackBar(content: Text('This email address is already in use.')),
           );
         } else {
-          Navigator.pushNamed(context, '/archievement');
+          Navigator.pushNamed(context, '/profile');
         }
       }
     } catch (e) {
