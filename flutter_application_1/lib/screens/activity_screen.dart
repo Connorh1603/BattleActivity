@@ -412,6 +412,7 @@ Widget build(BuildContext context) {
           const PopupMenuItem(value: 'category_Lernen', child: Text("Kategorie: Lernen")),
           const PopupMenuItem(value: 'category_Kochen', child: Text("Kategorie: Kochen")),
           const PopupMenuItem(value: 'category_Musik', child: Text("Kategorie: Musik")),
+          const PopupMenuItem(value: 'category_Laufen', child: Text("Kategorie: Musik")),
           const PopupMenuItem(value: 'category_', child: Text("Alle Kategorien")), // Zurücksetzen
         ],
       ),
