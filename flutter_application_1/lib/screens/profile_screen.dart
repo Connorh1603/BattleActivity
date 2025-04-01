@@ -234,25 +234,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 children: [
                   Text("Rewards", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                   SizedBox(height: 10),
-                  StreamBuilder(
-                    stream: _firestore.collection('rewards').where('userId', isEqualTo: _auth.currentUser?.uid).snapshots(),
+                 StreamBuilder(
+                    stream: _firestore.collection('users').doc(_auth.currentUser?.uid).snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.hasData) {
-                        if (snapshot.data!.docs.isEmpty) {
+                        final userData = snapshot.data!.data();
+                        if (userData != null && userData.containsKey('achievements')) {
+                          final achievements = userData['achievements'] as List<dynamic>;
+                          if (achievements.isEmpty) {
+                            return Center(child: Text("No rewards found"));
+                          }
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: achievements.length,
+                            itemBuilder: (context, index) {
+                              final achievement = achievements[index] as Map<String, dynamic>;
+                              return ListTile(
+                                title: Text(achievement['name']),
+                                trailing: Text(achievement['badge']),
+                              );
+                            },
+                          );
+                        } else {
                           return Center(child: Text("No rewards found"));
                         }
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: snapshot.data!.docs.length,
-                          itemBuilder: (context, index) {
-                            final reward = snapshot.data!.docs[index];
-                            return ListTile(
-                              title: Text(reward.get('name')),
-                              subtitle: Text(reward.get('description')),
-                              trailing: Text("${reward.get('points')} Points"),
-                            );
-                          },
-                        );
                       } else {
                         return Center(child: CircularProgressIndicator());
                       }
