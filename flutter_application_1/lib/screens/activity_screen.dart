@@ -254,7 +254,7 @@ Future<void> _ensureFolderExists(String userId) async {
       decoration: const InputDecoration(labelText: "Kategorie*"),
       validator: (val) => val == null || val.isEmpty ? "Bitte Kategorie auswählen" : null,
       items:
-          ['Sport', 'Lernen', 'Kochen', 'Musik'].map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
+          ['Sport', 'Lernen', 'Laufen', 'Musik', 'Freizeit'].map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
       onChanged: (val) => category = val!,
     ),
     const SizedBox(height: 10),
@@ -410,9 +410,9 @@ Widget build(BuildContext context) {
           const PopupMenuDivider(),
           const PopupMenuItem(value: 'category_Sport', child: Text("Kategorie: Sport")),
           const PopupMenuItem(value: 'category_Lernen', child: Text("Kategorie: Lernen")),
-          const PopupMenuItem(value: 'category_Kochen', child: Text("Kategorie: Kochen")),
+          const PopupMenuItem(value: 'category_Laufen', child: Text("Kategorie: Laufen")),
           const PopupMenuItem(value: 'category_Musik', child: Text("Kategorie: Musik")),
-          const PopupMenuItem(value: 'category_Laufen', child: Text("Kategorie: Musik")),
+          const PopupMenuItem(value: 'category_Freizeit', child: Text("Kategorie: Freizeit")),
           const PopupMenuItem(value: 'category_', child: Text("Alle Kategorien")), // Zurücksetzen
         ],
       ),
