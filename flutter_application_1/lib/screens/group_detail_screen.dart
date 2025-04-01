@@ -12,7 +12,6 @@ class GroupDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    print("DEBUG: Benutzername im Detail-Screen: $username");
 
     return Scaffold(
       appBar: AppBar(title: Text('Gruppendetails')),
@@ -38,7 +37,32 @@ class GroupDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(groupName, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      groupName,
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade100.withOpacity(0.4),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        groupType,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.blue.shade800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
                 SizedBox(height: 16),
                 Text("Mitglieder:", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
@@ -66,14 +90,28 @@ class GroupDetailScreen extends StatelessWidget {
                             );
                           }
 
-                          final username = userSnapshot.data!.get('username') ?? 'Unbekannt';
+                          final docData = userSnapshot.data!.data();
+                          if (docData is! Map<String, dynamic>) {
+                            return const ListTile(
+                              leading: Icon(Icons.person),
+                              title: Text("Fehlerhafte Daten"),
+                            );
+                          }
+
+                          final username = docData['username'] ?? 'Unbekannt';
+                          final profileUrl = docData['profilePictureUrl'] ?? '';
 
                           return Card(
                             elevation: 3,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                             child: ListTile(
-                              leading: const Icon(Icons.person, size: 28),
+                              leading: profileUrl.isNotEmpty
+                                  ? CircleAvatar(
+                                      backgroundImage: NetworkImage(profileUrl),
+                                      radius: 20,
+                                    )
+                                  : const Icon(Icons.person, size: 28),
                               title: Text(
                                 username,
                                 style: const TextStyle(fontWeight: FontWeight.w500),
