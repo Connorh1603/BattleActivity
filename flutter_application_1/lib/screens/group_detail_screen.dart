@@ -157,7 +157,7 @@ class GroupDetailScreen extends StatelessWidget {
                         padding: const EdgeInsets.only(left: 16.0, right: 22.0), // ⬅️ Abstand links & rechts
                         child: BarChart(
                           BarChartData(
-                            alignment: BarChartAlignment.spaceBetween,
+                            alignment: BarChartAlignment.spaceAround,
                             maxY: maxY,
                             barGroups: leaderboardData.asMap().entries.map((entry) {
                               final index = entry.key;
@@ -213,26 +213,42 @@ class GroupDetailScreen extends StatelessWidget {
                 SizedBox(height: 16),
                 Align(
                   alignment: Alignment.center,
-                  child: TextButton(
+                  child: OutlinedButton(
                     onPressed: () async {
                       await _leaveGroup();
                       Navigator.pop(context);
                     },
-                    child: Text("Gruppe Verlassen", style: TextStyle(color: Colors.red, fontSize: 18)),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.red),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                    child: Text(
+                      "Gruppe Verlassen",
+                      style: TextStyle(color: Colors.red, fontSize: 16),
+                    ),
                   ),
                 ),
                 SizedBox(height: 8),
                 Align(
                   alignment: Alignment.center,
-                  child: TextButton(
+                  child: OutlinedButton(
                     onPressed: () => _showAddMemberDialog(context, isAdmin),
-                    child: Text("Mitglied hinzufügen", style: TextStyle(color: Colors.green, fontSize: 18)),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.green),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                    child: Text(
+                      "Mitglied hinzufügen",
+                      style: TextStyle(color: Colors.green, fontSize: 16),
+                    ),
                   ),
                 ),
                 SizedBox(height: 8),
                 Align(
                   alignment: Alignment.center,
-                  child: TextButton(
+                  child: OutlinedButton(
                     onPressed: () async {
                       final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
                       final groupSnapshot = await groupRef.get();
@@ -244,7 +260,15 @@ class GroupDetailScreen extends StatelessWidget {
                         _showNotAdminMessage(context);
                       }
                     },
-                    child: Text("Gruppennamen ändern", style: TextStyle(color: Colors.blue, fontSize: 18)),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(color: Colors.blue),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                    child: Text(
+                      "Gruppennamen ändern",
+                      style: TextStyle(color: Colors.blue, fontSize: 16),
+                    ),
                   ),
                 ),
               ],
