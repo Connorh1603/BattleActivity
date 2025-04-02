@@ -375,8 +375,26 @@ class SettingsDialog extends StatelessWidget {
               ListTile(title: Text('Help and Support')),
               ListTile(title: Text('Feedback')),
               ListTile(title: Text('Frequently asked questions')),
-              ListTile(title: Text('Terms of Use')),
-              ListTile(title: Text('Privacy Policy')),
+              ListTile(
+                title: Text('Terms of Use'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (context) => const TermsOfUseDialog(),
+                  );
+                },
+              ),
+              ListTile(
+                title: Text('Privacy Policy'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (context) => const PrivacyPolicyDialog(),
+                  );
+                },
+              ),
             ],
           ),
         ],
@@ -535,6 +553,120 @@ class _AboutDialogMarkdownState extends State<AboutDialogMarkdown> {
           mainAxisSize: MainAxisSize.min,
           children: [
             MarkdownBody(data: _markdownText),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Schließen'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Terms of Use Dialog
+class TermsOfUseDialog extends StatefulWidget {
+  const TermsOfUseDialog({super.key});
+
+  @override
+  State<TermsOfUseDialog> createState() => _TermsOfUseDialogState();
+}
+
+class _TermsOfUseDialogState extends State<TermsOfUseDialog> {
+  String _markdownText = '';
+
+  Future<void> _loadMarkdown() async {
+    try {
+      final fileContent = await rootBundle.loadString('terms_of_use.md');
+      setState(() {
+        _markdownText = fileContent;
+      });
+    } catch (e) {
+      print('Fehler beim Laden der Nutzungsbedingungen: $e');
+      setState(() {
+        _markdownText = 'Fehler beim Laden der Nutzungsbedingungen.';
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMarkdown();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Expanded(
+              child: Markdown(
+                data: _markdownText,
+                shrinkWrap: true,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Schließen'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Privacy Policy Dialog
+class PrivacyPolicyDialog extends StatefulWidget {
+  const PrivacyPolicyDialog({super.key});
+
+  @override
+  State<PrivacyPolicyDialog> createState() => _PrivacyPolicyDialogState();
+}
+
+class _PrivacyPolicyDialogState extends State<PrivacyPolicyDialog> {
+  String _markdownText = '';
+
+  Future<void> _loadMarkdown() async {
+    try {
+      final fileContent = await rootBundle.loadString('privacy_policy.md');
+      setState(() {
+        _markdownText = fileContent;
+      });
+    } catch (e) {
+      print('Fehler beim Laden der Datenschutzerklärung: $e');
+      setState(() {
+        _markdownText = 'Fehler beim Laden der Datenschutzerklärung.';
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMarkdown();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Expanded(
+              child: Markdown(
+                data: _markdownText,
+                shrinkWrap: true,
+              ),
+            ),
             const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () => Navigator.of(context).pop(),
