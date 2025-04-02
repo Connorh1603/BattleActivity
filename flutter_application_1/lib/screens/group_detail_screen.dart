@@ -71,10 +71,7 @@ class GroupDetailScreen extends StatelessWidget {
                     itemCount: members.length,
                     itemBuilder: (context, index) {
                       return FutureBuilder<DocumentSnapshot>(
-                        future: FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(members[index])
-                            .get(),
+                        future: FirebaseFirestore.instance.collection('users').doc(members[index]).get(),
                         builder: (context, userSnapshot) {
                           if (userSnapshot.connectionState == ConnectionState.waiting) {
                             return const ListTile(
@@ -90,16 +87,42 @@ class GroupDetailScreen extends StatelessWidget {
                             );
                           }
 
-                          final docData = userSnapshot.data!.data();
-                          if (docData is! Map<String, dynamic>) {
-                            return const ListTile(
-                              leading: Icon(Icons.person),
-                              title: Text("Fehlerhafte Daten"),
-                            );
+                          final data = userSnapshot.data!.data() as Map<String, dynamic>;
+                          final username = data['username'] ?? 'Unbekannt';
+                          final profileUrl = data['profilePictureUrl'] ?? '';
+                          final achievements = (data['achievements'] as List?)?.whereType<Map<String, dynamic>>().toList() ?? [];
+
+                          // Gruppenkategorie verwenden, um passende Achievements zu filtern
+                          final List<String> learningAchievements = ['Gelernte Minuten', 'Lern-Sessions'];
+                          final List<String> sportAchievements = ['Fitness Freak', 'Workouts absolviert'];
+                          final List<String> runAchievements = ['Lauflegende', 'Läufe abgeschlossen'];
+                          final List<String> musicAchievements = ['Neuer Mozart', 'Musik gespielt'];
+                          final List<String> funAchievements = ['Freiheit', 'Am Chillen'];
+
+                          List<String> categoryAchievements;
+                          switch (groupType.toLowerCase()) {
+                            case 'lernen':
+                              categoryAchievements = learningAchievements;
+                              break;
+                            case 'sport':
+                              categoryAchievements = sportAchievements;
+                              break;
+                            case 'laufen':
+                              categoryAchievements = runAchievements;
+                              break;
+                            case 'musik':
+                              categoryAchievements = musicAchievements;
+                              break;
+                            case 'freizeit':
+                              categoryAchievements = funAchievements;
+                              break;
+                            default:
+                              categoryAchievements = [];
                           }
 
-                          final username = docData['username'] ?? 'Unbekannt';
-                          final profileUrl = docData['profilePictureUrl'] ?? '';
+                          final userCategoryAchievements = achievements
+                              .where((a) => categoryAchievements.contains(a['name']) && (a['badge']?.toString().isNotEmpty ?? false))
+                              .toList();
 
                           return Card(
                             elevation: 3,
@@ -107,15 +130,20 @@ class GroupDetailScreen extends StatelessWidget {
                             margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
                             child: ListTile(
                               leading: profileUrl.isNotEmpty
-                                  ? CircleAvatar(
-                                      backgroundImage: NetworkImage(profileUrl),
-                                      radius: 20,
-                                    )
+                                  ? CircleAvatar(backgroundImage: NetworkImage(profileUrl), radius: 22)
                                   : const Icon(Icons.person, size: 28),
                               title: Text(
                                 username,
                                 style: const TextStyle(fontWeight: FontWeight.w500),
                               ),
+                              subtitle: userCategoryAchievements.isNotEmpty
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: userCategoryAchievements.map((a) {
+                                        return Text("${a['name']}: ${a['badge']}", style: const TextStyle(fontSize: 12));
+                                      }).toList(),
+                                    )
+                                  : null,
                             ),
                           );
                         },
