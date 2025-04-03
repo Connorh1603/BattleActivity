@@ -26,6 +26,7 @@ class GroupDetailScreen extends StatelessWidget {
           final groupData = snapshot.data!;
           final groupName = groupData['name'] ?? 'Unbekannte Gruppe';
           final adminId = groupData['admin'] ?? '';
+          final groupType = groupData['type'] ?? 'Kein Typ';
           final members = List<String>.from(groupData['members'] ?? []);
           final isAdmin = userId == adminId;
 

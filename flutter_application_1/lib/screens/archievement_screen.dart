@@ -1,4 +1,5 @@
 import 'imports.dart';
+import 'package:percent_indicator/percent_indicator.dart';
 
 class Achievement {
   final String name;
@@ -65,7 +66,7 @@ class _AchievementScreenState extends State {
         .collection('activities')
         .get();
 
-    int totalLearningHours = 0;
+    int totalLearningMinutes = 0;
     int totalFitnessSessions = 0;
     int totalRuns = 0;
     int learningSessions = 0;
