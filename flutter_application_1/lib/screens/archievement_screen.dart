@@ -1,7 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:percent_indicator/percent_indicator.dart';
+import 'imports.dart';
 
 class Achievement {
   final String name;
@@ -28,10 +25,9 @@ class AchievementScreen extends StatefulWidget {
   _AchievementScreenState createState() => _AchievementScreenState();
 }
 
-class _AchievementScreenState extends State<AchievementScreen> {
+class _AchievementScreenState extends State {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  
   List<Achievement> achievements = [];
 
   @override
@@ -68,8 +64,8 @@ class _AchievementScreenState extends State<AchievementScreen> {
         .doc(userId)
         .collection('activities')
         .get();
-    
-    int totalLearningMinutes = 0;
+
+    int totalLearningHours = 0;
     int totalFitnessSessions = 0;
     int totalRuns = 0;
     int learningSessions = 0;
@@ -103,7 +99,7 @@ class _AchievementScreenState extends State<AchievementScreen> {
         musicSessions += 1;
       }
     }
-    
+
     setState(() {
       achievements = [
         _createAchievement('Gelernte Minuten', totalLearningMinutes, 600, Icons.school),
@@ -142,15 +138,95 @@ class _AchievementScreenState extends State<AchievementScreen> {
     } else if (current >= baseGoal) {
       badge = 'Bronze';
       goal = baseGoal * 2;
-    } 
-    
-    return Achievement(name: name, current: current, goal: goal, badge: badge,  icon: icon,);
+    }
+
+    return Achievement(name: name, current: current, goal: goal, badge: badge, icon: icon);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Erfolge')),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(70), // Höhe der AppBar erhöhen
+        child: Container(
+          decoration: BoxDecoration(
+            color: Color.fromARGB(255, 127, 179, 68), // Hintergrundfarbe Grün
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey[300] ?? Colors.grey, // Schattenfarbe
+                blurRadius: 5, // Schattenradius
+                offset: Offset(0, 2), // Schattenposition
+              ),
+            ],
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)), // Ecken der Navigationsleiste abrunden
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.arrow_back, size: 30, color: Colors.white), // Zurück-Button weiß
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  Text('Zurück', style: TextStyle(fontSize: 20, color: Colors.white)), // Zurück-Text weiß
+                ],
+              ),
+              Expanded(
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/activity'); // Navigiere zur Aktivitäten-Seite
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                            foregroundColor: Colors.white, // Schriftfarbe Weiß
+                          ),
+                          child:
+                              Text('Aktivitäten', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.pushNamed(context, '/group'); // Navigiere zur Gruppen-Seite
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor:
+                                const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                            foregroundColor: Colors.white, // Schriftfarbe Weiß
+                          ),
+                          child:
+                              Text('Gruppen', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                        ),
+                      ],
+                    ),
+                    Positioned(
+                      top: 0,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/profile'); // Navigiere zur Profil-Seite
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                          foregroundColor: Colors.white, // Schriftfarbe Weiß
+                        ),
+                        child:
+                            Text('Profil', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(

@@ -1,7 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:fl_chart/fl_chart.dart';
-import 'package:flutter/services.dart';
+import 'imports.dart';
 
 class GroupDetailScreen extends StatelessWidget {
   final String groupId;
@@ -12,9 +9,10 @@ class GroupDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    print("DEBUG: Benutzername im Detail-Screen: $username");
 
     return Scaffold(
-      appBar: AppBar(title: Text('Gruppendetails')),
+      appBar: AppBar(title: Text('Zurück')),
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance.collection('Groups').doc(groupId).get(),
         builder: (context, snapshot) {
@@ -27,7 +25,6 @@ class GroupDetailScreen extends StatelessWidget {
 
           final groupData = snapshot.data!;
           final groupName = groupData['name'] ?? 'Unbekannte Gruppe';
-          final groupType = groupData['typ'] ?? 'Kein Typ';
           final adminId = groupData['admin'] ?? '';
           final members = List<String>.from(groupData['members'] ?? []);
           final isAdmin = userId == adminId;

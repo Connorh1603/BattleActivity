@@ -1,12 +1,4 @@
-// profile_screen.dart
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:file_picker/file_picker.dart';
-import 'dart:typed_data';
-import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'imports.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -92,41 +84,299 @@ class _ProfileScreenState extends State<ProfileScreen> {
 @override
 Widget build(BuildContext context) {
   return Scaffold(
-    appBar: PreferredSize(
-      preferredSize: Size.fromHeight(70), // Höhe der AppBar erhöhen
-      child: Container(
-        decoration: BoxDecoration(
-          color: Color(0xFF007bff), // Blau heller gestalten
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)), // Ecken der Navigationsleiste abrunden
+appBar: PreferredSize(
+  preferredSize: Size.fromHeight(70), // Höhe der AppBar erhöhen
+  child: Container(
+    decoration: BoxDecoration(
+      color: Color.fromARGB(255, 127, 179, 68), // Hintergrundfarbe Grün
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey[300] ?? Colors.grey, // Schattenfarbe
+          blurRadius: 5, // Schattenradius
+          offset: Offset(0, 2), // Schattenposition
         ),
-        child: Row(
+      ],
+      borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)), // Ecken der Navigationsleiste abrunden
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
           children: [
             IconButton(
-              icon: Icon(Icons.arrow_back, size: 30, color: Colors.white), // Zurück-Button größer und weiß
+              icon: Icon(Icons.arrow_back, size: 30, color: Colors.white), // Zurück-Button weiß
               onPressed: () => Navigator.pop(context),
             ),
-            Text('Profile', style: TextStyle(fontSize: 24, color: Colors.white)), // Titelgröße erhöhen
-            Expanded(
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly, // Screennamen gleichmäßig verteilen
+            Text('Zurück', style: TextStyle(fontSize: 20, color: Colors.white)), // Zurück-Text weiß
+          ],
+        ),
+        Expanded(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  TextButton(
+                  ElevatedButton(
                     onPressed: () {
                       Navigator.pushNamed(context, '/archievement'); // Navigiere zur Archivments-Seite
                     },
-                    child: Text('Archivments', style: TextStyle(fontSize: 20, color: Colors.white)), // Schriftgröße erhöhen und weiß
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                      foregroundColor: Colors.white, // Schriftfarbe Weiß
+                    ),
+                    child:
+                        Text('Erfolge', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
                   ),
-                  TextButton(
+                  ElevatedButton(
                     onPressed: () {
-                      Navigator.pushNamed(context, '/group'); // Navigiere zur Group-Seite
+                      Navigator.pushNamed(context, '/activity'); // Navigiere zur Aktivitäten-Seite
                     },
-                    child: Text('Groups', style: TextStyle(fontSize: 20, color: Colors.white)), // Schriftgröße erhöhen und weiß
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                      foregroundColor: Colors.white, // Schriftfarbe Weiß
+                    ),
+                    child:
+                        Text('Aktivitäten', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
                   ),
-                  TextButton(
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/activity'); // Navigiere zur Activity-Seite
+                ],
+              ),
+              Positioned(
+                top: 0,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/group'); // Navigiere zur Gruppen-Seite
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                    foregroundColor: Colors.white, // Schriftfarbe Weiß
+                  ),
+                  child:
+                      Text('Gruppen', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
+),
+body: Column(
+  children: [
+    Expanded(
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Benutzername und andere Informationen
+            SizedBox(height: 20),
+            Center(
+              child: StreamBuilder(
+                stream: _firestore.collection('users').doc(_auth.currentUser?.uid).snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    final data = snapshot.data!.data() as Map;
+                    final url = data['profilePictureUrl'];
+                    return Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 100,
+                          backgroundImage: url != null ? NetworkImage(url) : null,
+                          child: url == null ? Icon(Icons.person, size: 140) : null,
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: CircleAvatar(
+                            backgroundColor: Colors.blue,
+                            radius: 20,
+                            child: IconButton(
+                              icon: Icon(Icons.edit, color: Colors.white),
+                              onPressed: _pickImage,
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  } else if (snapshot.hasError) {
+                    return Text('Error loading profile picture.');
+                  } else {
+                    return CircularProgressIndicator();
+                  }
+                },
+              ),
+            ),
+            SizedBox(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                StreamBuilder(
+                  stream: _firestore.collection('users').doc(_auth.currentUser?.uid).snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasData) {
+                      return Text(snapshot.data!.get('username'), style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold));
+                    } else {
+                      return Text('Loading...');
+                    }
+                  },
+                ),
+                SizedBox(width: 10),
+                IconButton(icon: Icon(Icons.settings), onPressed: () => showDialog(context: context, builder: (context) => SettingsDialog())),
+              ],
+            ),
+            SizedBox(height: 10), // Abstand zwischen Benutzername und Abmeldebutton
+            ElevatedButton(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                Navigator.pushNamed(context, '/login');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, // Hintergrundfarbe Rot
+                foregroundColor: Colors.white, // Schriftfarbe Weiß
+                minimumSize: Size(150, 50), // Größe des Buttons
+              ),
+              child: Text('Abmelden', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+            ),
+            SizedBox(height: 20),
+            // Activities-Bereich
+            Container(
+              decoration: BoxDecoration(
+                color: Color.fromARGB(255, 127, 179, 68), // Hintergrundfarbe ändern
+                borderRadius: BorderRadius.circular(10), // Ecken abrunden
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Letzte 3 Aktivitäten",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white), // Schriftfarbe Weiß
+                  ),
+                  SizedBox(height: 10),
+                  StreamBuilder(
+                    stream: _firestore
+                        .collection('users')
+                        .doc(_auth.currentUser?.uid)
+                        .collection('activities')
+                        .orderBy('timestamp', descending: true)
+                        .limit(3)
+                        .snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        if (snapshot.data!.docs.isEmpty) {
+                          return Center(child: Text("No activities found", style: TextStyle(color: Colors.white))); // Schriftfarbe Weiß
+                        }
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          itemCount: snapshot.data!.docs.length,
+                          itemBuilder: (context, index) {
+                            final activity = snapshot.data!.docs[index];
+                            final imageUrl = activity.get('imageUrl');
+                            return Card(
+                              elevation: 4,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              child: ListTile(
+                                leading: imageUrl != null && imageUrl.isNotEmpty
+                                    ? Image.network(imageUrl, width: 50, height: 50, fit: BoxFit.cover)
+                                    : Container(
+                                        width: 50,
+                                        height: 50,
+                                        color: Colors.grey[300],
+                                        child: const Icon(Icons.image, size: 24),
+                                      ),
+                                title: Text(activity.get('title'), style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)), // Schriftfarbe Schwarz
+                                subtitle: Text(activity.get('description'), style: TextStyle(color: Colors.black)), // Schriftfarbe Schwarz
+                                trailing: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      "Erstellt am: ${DateTime.fromMillisecondsSinceEpoch(activity.get('timestamp')).toString().split(' ').first}",
+                                      style: TextStyle(fontSize: 12, color: Colors.black), // Schriftfarbe Schwarz
+                                    ),
+                                    Text(
+                                      "Geändert am: ${DateTime.fromMillisecondsSinceEpoch(activity.get('updatedTimestamp') ?? activity.get('timestamp')).toString().split(' ').first}",
+                                      style: TextStyle(fontSize: 12, color: Colors.black), // Schriftfarbe Schwarz
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      } else {
+                        return Center(child: CircularProgressIndicator());
+                      }
                     },
-                    child: Text('Activities', style: TextStyle(fontSize: 20, color: Colors.white)), // Schriftgröße erhöhen und weiß
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(height: 20),
+            // Rewards-Bereich
+            Container(
+              decoration: BoxDecoration(
+                color: Color.fromARGB(255, 127, 179, 68), // Hintergrundfarbe ändern
+                borderRadius: BorderRadius.circular(10), // Ecken abrunden
+              ),
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Rewards",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white), // Schriftfarbe Weiß
+                  ),
+                  SizedBox(height: 10),
+                  StreamBuilder(
+                    stream: _firestore.collection('users').doc(_auth.currentUser?.uid).snapshots(),
+                    builder: (context, snapshot) {
+                      if (snapshot.hasData) {
+                        final userData = snapshot.data!.data();
+                        if (userData != null && userData.containsKey('achievements')) {
+                          final achievements = userData['achievements'] as List<dynamic>;
+                          if (achievements.isEmpty) {
+                            return Center(child: Text("No rewards found", style: TextStyle(color: Colors.white))); // Schriftfarbe Weiß
+                          }
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: achievements.length,
+                            itemBuilder: (context, index) {
+                              final achievement = achievements[index] as Map<String, dynamic>;
+                              return Container(
+                                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                                padding: const EdgeInsets.all(12.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200], // Hintergrundfarbe Grau
+                                  border: Border.all(color: Colors.grey), // Rahmenfarbe Grau
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      achievement['name'],
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black), // Schriftfarbe Schwarz
+                                    ),
+                                    Image.asset(
+                                      '${achievement['badge'].toLowerCase()}.png',
+                                      width: 50,
+                                      height: 50,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        } else {
+                          return Center(child: Text("No rewards found", style: TextStyle(color: Colors.white))); // Schriftfarbe Weiß
+                        }
+                      } else {
+                        return Center(child: CircularProgressIndicator());
+                      }
+                    },
                   ),
                 ],
               ),
@@ -135,209 +385,11 @@ Widget build(BuildContext context) {
         ),
       ),
     ),
-    body: Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                // Benutzername und andere Informationen
-                SizedBox(height: 20),
-                Center(
-                  child: StreamBuilder(
-                    stream: _firestore.collection('users').doc(_auth.currentUser?.uid).snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        final data = snapshot.data!.data() as Map;
-                        final url = data['profilePictureUrl'];
-                        return Stack(
-                          children: [
-                            CircleAvatar(
-                              radius: 100,
-                              backgroundImage: url != null ? NetworkImage(url) : null,
-                              child: url == null ? Icon(Icons.person, size: 140) : null,
-                            ),
-                            Positioned(
-                              bottom: 0,
-                              right: 0,
-                              child: CircleAvatar(
-                                backgroundColor: Colors.blue,
-                                radius: 20,
-                                child: IconButton(
-                                  icon: Icon(Icons.edit, color: Colors.white),
-                                  onPressed: _pickImage,
-                                ),
-                              ),
-                            ),
-                          ],
-                        );
-                      } else if (snapshot.hasError) {
-                        return Text('Error loading profile picture.');
-                      } else {
-                        return CircularProgressIndicator();
-                      }
-                    },
-                  ),
-                ),
-                SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    StreamBuilder(
-                      stream: _firestore.collection('users').doc(_auth.currentUser?.uid).snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData) {
-                          return Text(snapshot.data!.get('username'), style: TextStyle(fontSize: 36, fontWeight: FontWeight.bold));
-                        } else {
-                          return Text('Loading...');
-                        }
-                      },
-                    ),
-                    SizedBox(width: 10),
-                    IconButton(icon: Icon(Icons.settings), onPressed: () => showDialog(context: context, builder: (context) => SettingsDialog())),
-                  ],
-                ),
-                SizedBox(height: 20),
-                // Activities-Bereich
-                Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.grey),
-                  ),
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("Letzte 3 Aktivitäten", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                      SizedBox(height: 10),
-                      StreamBuilder(
-                        stream: _firestore
-                            .collection('users')
-                            .doc(_auth.currentUser?.uid)
-                            .collection('activities')
-                            .orderBy('timestamp', descending: true)
-                            .limit(3)
-                            .snapshots(),
-                        builder: (context, snapshot) {
-                          if (snapshot.hasData) {
-                            if (snapshot.data!.docs.isEmpty) {
-                              return Center(child: Text("No activities found"));
-                            }
-                            return ListView.builder(
-                              shrinkWrap: true,
-                              itemCount: snapshot.data!.docs.length,
-                              itemBuilder: (context, index) {
-                                final activity = snapshot.data!.docs[index];
-                                final imageUrl = activity.get('imageUrl');
-                                return Card(
-                                  elevation: 4,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                  child: ListTile(
-                                    leading: imageUrl != null && imageUrl.isNotEmpty
-                                        ? Image.network(imageUrl, width: 50, height: 50, fit: BoxFit.cover)
-                                        : Container(
-                                            width: 50,
-                                            height: 50,
-                                            color: Colors.grey[300],
-                                            child: const Icon(Icons.image, size: 24),
-                                          ),
-                                    title: Text(activity.get('title'), style: TextStyle(fontWeight: FontWeight.bold)),
-                                    subtitle: Text(activity.get('description')),
-                                    trailing: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          "Erstellt am: ${DateTime.fromMillisecondsSinceEpoch(activity.get('timestamp')).toString().split(' ').first}",
-                                          style: TextStyle(fontSize: 12),
-                                        ),
-                                        Text(
-                                          "Geändert am: ${DateTime.fromMillisecondsSinceEpoch(activity.get('updatedTimestamp') ?? activity.get('timestamp')).toString().split(' ').first}",
-                                          style: TextStyle(fontSize: 12),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            );
-                          } else {
-                            return Center(child: CircularProgressIndicator());
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(height: 20),
-                // Rewards-Bereich
-                Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey),
-              ),
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Rewards", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 10),
-                 StreamBuilder(
-                    stream: _firestore.collection('users').doc(_auth.currentUser?.uid).snapshots(),
-                    builder: (context, snapshot) {
-                      if (snapshot.hasData) {
-                        final userData = snapshot.data!.data();
-                        if (userData != null && userData.containsKey('achievements')) {
-                          final achievements = userData['achievements'] as List<dynamic>;
-                          if (achievements.isEmpty) {
-                            return Center(child: Text("No rewards found"));
-                          }
-                          return ListView.builder(
-                            shrinkWrap: true,
-                            itemCount: achievements.length,
-                            itemBuilder: (context, index) {
-                              final achievement = achievements[index] as Map<String, dynamic>;
-                  return Container(
-                    margin: const EdgeInsets.symmetric(vertical: 8.0),
-                    padding: const EdgeInsets.all(12.0),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(achievement['name'], style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                        Image.asset(
-                          '${achievement['badge'].toLowerCase()}.png',
-                          width: 50,
-                          height: 50,
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              );
-            } else {
-                          return Center(child: Text("No rewards found"));
-                        }
-                      } else {
-                        return Center(child: CircularProgressIndicator());
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    ),
+  ],
+),
   );
 }
 }
-
 
 //Dialogfenster für Einstellungen
 class SettingsDialog extends StatelessWidget {

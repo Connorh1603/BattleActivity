@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'imports.dart';
 import 'package:flutter_application_1/screens/group_detail_screen.dart';
 
 class GroupScreen extends StatelessWidget {
@@ -12,7 +10,87 @@ class GroupScreen extends StatelessWidget {
     final String userId = currentUser?.uid ?? 'Unbekannt';
 
     return Scaffold(
-      appBar: AppBar(title: Text('Gruppen')),
+      appBar: PreferredSize(
+  preferredSize: Size.fromHeight(70), // Höhe der AppBar erhöhen
+  child: Container(
+    decoration: BoxDecoration(
+      color: Color.fromARGB(255, 127, 179, 68), // Hintergrundfarbe Grün
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey[300] ?? Colors.grey, // Schattenfarbe
+          blurRadius: 5, // Schattenradius
+          offset: Offset(0, 2), // Schattenposition
+        ),
+      ],
+      borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)), // Ecken der Navigationsleiste abrunden
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.arrow_back, size: 30, color: Colors.white), // Zurück-Button weiß
+              onPressed: () => Navigator.pop(context),
+            ),
+            Text('Zurück', style: TextStyle(fontSize: 20, color: Colors.white)), // Zurück-Text weiß
+          ],
+        ),
+        Expanded(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/archievement'); // Navigiere zur Archivments-Seite
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                      foregroundColor: Colors.white, // Schriftfarbe Weiß
+                    ),
+                    child:
+                        Text('Erfolge', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/activity'); // Navigiere zur Aktivitäten-Seite
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                      foregroundColor: Colors.white, // Schriftfarbe Weiß
+                    ),
+                    child:
+                        Text('Aktivitäten', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                  ),
+                ],
+              ),
+              Positioned(
+                top: 0,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/profile'); // Navigiere zur Profil-Seite
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                    foregroundColor: Colors.white, // Schriftfarbe Weiß
+                  ),
+                  child:
+                      Text('Profil', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
+),
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
         builder: (context, snapshot) {

@@ -1,18 +1,13 @@
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:file_picker/file_picker.dart';
-import 'dart:typed_data';
+import 'imports.dart';
 
 class ActivityScreen extends StatefulWidget {
   const ActivityScreen({super.key});
 
   @override
-  State createState() => _ActivityScreenState();
+  State<ActivityScreen> createState() => _ActivityScreenState();
 }
 
-class _ActivityScreenState extends State {
+class _ActivityScreenState extends State<ActivityScreen> {
   final _firestore = FirebaseFirestore.instance;
   final _auth = FirebaseAuth.instance;
   final _storage = FirebaseStorage.instance;
@@ -21,108 +16,102 @@ class _ActivityScreenState extends State {
   String sortBy = 'date_desc'; // Standard: Nach Datum (Neueste zuerst)
   String filterByCategory = ''; // Kein Filter standardmäßig
 
-
-Future _createOrUpdateActivity({
-  String? activityId,
-  required String title,
-  required String description,
-  required int duration,
-  required String category,
-  Uint8List? fileBytes,
-  String? fileName,
-}) async {
-  try {
-    final userId = _auth.currentUser?.uid;
-
-    if (userId == null) {
-      throw Exception('User not logged in');
-    }
-
-    final activitiesRef = _firestore.collection('users').doc(userId).collection('activities');
-    DocumentReference activityRef;
-
-    if (activityId == null) {
-      activityRef = activitiesRef.doc();
-      final activityData = {
-        'title': title,
-        'description': description,
-        'duration': duration,
-        'category': category,
-        'timestamp': DateTime.now().millisecondsSinceEpoch,
-        'updatedTimestamp': null,
-        'userId': userId,
-        'imageUrl': '',
-        'groupIds': [],
-      };
-
-      if (fileBytes != null && fileName != null) {
-        final storageRef = _storage.ref().child('profile/$userId/activity_pictures/${activityRef.id}');
-        await storageRef.putData(fileBytes);
-        final downloadUrl = await storageRef.getDownloadURL();
-        activityData['imageUrl'] = downloadUrl;
-      }
-
-      await activityRef.set(activityData);
-    } else {
-      activityRef = activitiesRef.doc(activityId);
-      final activityData = {
-        'title': title,
-        'description': description,
-        'duration': duration,
-        'category': category,
-        'userId': userId,
-        'imageUrl': '',
-        'groupIds': [],
-      };
-
-      if (fileBytes != null && fileName != null) {
-        final storageRef = _storage.ref().child('profile/$userId/activity_pictures/$activityId');
-        try {
-          await storageRef.delete();
-        } catch (e) {
-          print('Bild existiert nicht, daher wird es nicht gelöscht.');
-        }
-
-        await storageRef.putData(fileBytes);
-        final downloadUrl = await storageRef.getDownloadURL();
-        activityData['imageUrl'] = downloadUrl;
-      }
-      
-
-      activityData['updatedTimestamp'] = DateTime.now().millisecondsSinceEpoch;
-
-      await activityRef.update(activityData);
-    }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(activityId == null ? 'Aktivität erstellt!' : 'Aktivität aktualisiert!')),
-    );
-  } catch (e) {
-    print('Error creating or updating activity: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Fehler beim Speichern der Aktivität: $e')),
-    );
-  }
-}
-
-
-
-
-Future<void> _ensureFolderExists(String userId) async {
-  final storageRef = _storage.ref().child('profile/$userId/activity_pictures');
-  try {
-    await storageRef.listAll();
-  } catch (e) {
-    // Der Ordner existiert nicht, daher erstellen wir ihn
-    await storageRef.putString('.keep');
-    print('Ordner erstellt: profile/$userId/activity_pictures');
-  }
-}
-
-
-  Future<void> _deleteActivity(String activityId) async {
+  Future _createOrUpdateActivity({
+    String? activityId,
+    required String title,
+    required String description,
+    required int duration,
+    required String category,
+    Uint8List? fileBytes,
+    String? fileName,
+  }) async {
     try {
       final userId = _auth.currentUser?.uid;
+
+      if (userId == null) {
+        throw Exception('User not logged in');
+      }
+
+      final activitiesRef = _firestore.collection('users').doc(userId).collection('activities');
+      DocumentReference activityRef;
+
+      if (activityId == null) {
+        activityRef = activitiesRef.doc();
+        final activityData = {
+          'title': title,
+          'description': description,
+          'duration': duration,
+          'category': category,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          'updatedTimestamp': null,
+          'userId': userId,
+          'imageUrl': '',
+          'groupIds': [],
+        };
+
+        if (fileBytes != null && fileName != null) {
+          final storageRef = _storage.ref().child('profile/$userId/activity_pictures/${activityRef.id}');
+          await storageRef.putData(fileBytes);
+          final downloadUrl = await storageRef.getDownloadURL();
+          activityData['imageUrl'] = downloadUrl;
+        }
+
+        await activityRef.set(activityData);
+      } else {
+        activityRef = activitiesRef.doc(activityId);
+        final activityData = {
+          'title': title,
+          'description': description,
+          'duration': duration,
+          'category': category,
+          'userId': userId,
+          'imageUrl': '',
+          'groupIds': [],
+        };
+
+        if (fileBytes != null && fileName != null) {
+          final storageRef = _storage.ref().child('profile/$userId/activity_pictures/$activityId');
+          try {
+            await storageRef.delete();
+          } catch (e) {
+            print('Bild existiert nicht, daher wird es nicht gelöscht.');
+          }
+
+          await storageRef.putData(fileBytes);
+          final downloadUrl = await storageRef.getDownloadURL();
+          activityData['imageUrl'] = downloadUrl;
+        }
+
+        activityData['updatedTimestamp'] = DateTime.now().millisecondsSinceEpoch;
+        await activityRef.update(activityData);
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(activityId == null ? 'Aktivität erstellt!' : 'Aktivität aktualisiert!')),
+      );
+    } catch (e) {
+      print('Error creating or updating activity: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler beim Speichern der Aktivität: $e')),
+      );
+    }
+  }
+
+  Future _ensureFolderExists(String userId) async {
+    final storageRef = _storage.ref().child('profile/$userId/activity_pictures');
+    try {
+      await storageRef.listAll();
+    } catch (e) {
+      // Der Ordner existiert nicht, daher erstellen wir ihn
+      await storageRef.putString('.keep');
+      print('Ordner erstellt: profile/$userId/activity_pictures');
+    }
+  }
+
+  Future _deleteActivity(String activityId) async {
+    try {
+      final userId = _auth.currentUser?.uid;
+
       if (userId == null) {
         throw Exception('User not logged in');
       }
@@ -144,20 +133,24 @@ Future<void> _ensureFolderExists(String userId) async {
               ElevatedButton(
                 onPressed: () async {
                   final activityData = await activityRef.get();
+
                   if (activityData.exists) {
                     final data = activityData.data() as Map;
+
                     final imageUrl = data['imageUrl'];
+
                     if (imageUrl != null && imageUrl.isNotEmpty) {
                       await _storage.refFromURL(imageUrl).delete();
                     }
+
+                    await activityRef.delete();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Aktivität gelöscht!')),
+                    );
+
+                    Navigator.pop(context);
                   }
-
-                  await activityRef.delete();
-
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Aktivität gelöscht!')),
-                  );
-                  Navigator.pop(context);
                 },
                 child: const Text("Löschen"),
               ),
@@ -205,9 +198,11 @@ Future<void> _ensureFolderExists(String userId) async {
         return fileBytes;
       } else {
         print('No file selected.');
+        return null;
       }
     } catch (e) {
       print('Error picking image: $e');
+      return null;
     }
   }
 
@@ -378,65 +373,139 @@ Widget build(BuildContext context) {
   }
 
   return Scaffold(
-    appBar: AppBar(
-      title: const Text("Meine Aktivitäten"),
-      centerTitle: true,
+    appBar: PreferredSize(
+      preferredSize: Size.fromHeight(70), // Höhe der AppBar erhöhen
+      child: Container(
+        decoration: BoxDecoration(
+          color: Color.fromARGB(255, 127, 179, 68), // Hintergrundfarbe Grün
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey[300] ?? Colors.grey, // Schattenfarbe
+              blurRadius: 5, // Schattenradius
+              offset: Offset(0, 2), // Schattenposition
+            ),
+          ],
+          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)), // Ecken der Navigationsleiste abrunden
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back, size: 30, color: Colors.white), // Zurück-Button weiß
+                  onPressed: () => Navigator.pop(context),
+                ),
+                Text('Zurück', style: TextStyle(fontSize: 20, color: Colors.white)), // Zurück-Text weiß
+              ],
+            ),
+            Expanded(
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/archievement'); // Navigiere zur Archivments-Seite
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                          foregroundColor: Colors.white, // Schriftfarbe Weiß
+                        ),
+                        child:
+                            Text('Erfolge', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.pushNamed(context, '/group'); // Navigiere zur Gruppen-Seite
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                          foregroundColor: Colors.white, // Schriftfarbe Weiß
+                        ),
+                        child:
+                            Text('Gruppen', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                      ),
+                    ],
+                  ),
+                  Positioned(
+                    top: 0,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/profile'); // Navigiere zur Profil-Seite
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor:
+                            const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                        foregroundColor: Colors.white, // Schriftfarbe Weiß
+                      ),
+                      child:
+                          Text('Profil', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     ),
     body: Column(
       children: [
-
         Padding(
-  padding: const EdgeInsets.all(8.0),
-  child: Row(
-    children: [
-      PopupMenuButton<String>(
-        icon: const Icon(Icons.filter_list),
-        onSelected: (value) {
-          setState(() {
-            if (value.startsWith('category_')) {
-              filterByCategory = value.replaceFirst('category_', '');
-            } else {
-              sortBy = value;
-            }
-          });
-        },
-        itemBuilder: (context) => [
-          const PopupMenuItem(value: 'date_desc', child: Text("Datum (Neueste zuerst)")),
-          const PopupMenuItem(value: 'date_asc', child: Text("Datum (Älteste zuerst)")),
-          const PopupMenuItem(value: 'title_asc', child: Text("Titel (A-Z)")),
-          const PopupMenuItem(value: 'title_desc', child: Text("Titel (Z-A)")),
-          const PopupMenuItem(value: 'duration_desc', child: Text("Dauer (Längste zuerst)")),
-          const PopupMenuItem(value: 'duration_asc', child: Text("Dauer (Kürzeste zuerst)")),
-          const PopupMenuDivider(),
-          const PopupMenuItem(value: 'category_Sport', child: Text("Kategorie: Sport")),
-          const PopupMenuItem(value: 'category_Lernen', child: Text("Kategorie: Lernen")),
-          const PopupMenuItem(value: 'category_Laufen', child: Text("Kategorie: Laufen")),
-          const PopupMenuItem(value: 'category_Musik', child: Text("Kategorie: Musik")),
-          const PopupMenuItem(value: 'category_Freizeit', child: Text("Kategorie: Freizeit")),
-          const PopupMenuItem(value: 'category_', child: Text("Alle Kategorien")), // Zurücksetzen
-        ],
-      ),
-      const SizedBox(width: 8),
-      Expanded(
-        child: TextField(
-          decoration: const InputDecoration(
-            hintText: "Aktivität suchen...",
-            prefixIcon: Icon(Icons.search),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.all(Radius.circular(12)),
-            ),
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            children: [
+              PopupMenuButton(
+                icon: const Icon(Icons.filter_list),
+                onSelected: (value) {
+                  setState(() {
+                    if (value.startsWith('category_')) {
+                      filterByCategory = value.replaceFirst('category_', '');
+                    } else {
+                      sortBy = value;
+                    }
+                  });
+                },
+                itemBuilder: (context) => <PopupMenuEntry<String>>[
+                  const PopupMenuItem(value: 'date_desc', child: Text("Datum (Neueste zuerst)")),
+                  const PopupMenuItem(value: 'date_asc', child: Text("Datum (Älteste zuerst)")),
+                  const PopupMenuItem(value: 'title_asc', child: Text("Titel (A-Z)")),
+                  const PopupMenuItem(value: 'title_desc', child: Text("Titel (Z-A)")),
+                  const PopupMenuItem(value: 'duration_desc', child: Text("Dauer (Längste zuerst)")),
+                  const PopupMenuItem(value: 'duration_asc', child: Text("Dauer (Kürzeste zuerst)")),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(value: 'category_Sport', child: Text("Kategorie: Sport")),
+                  const PopupMenuItem(value: 'category_Lernen', child: Text("Kategorie: Lernen")),
+                  const PopupMenuItem(value: 'category_Kochen', child: Text("Kategorie: Kochen")),
+                  const PopupMenuItem(value: 'category_Musik', child: Text("Kategorie: Musik")),
+                  const PopupMenuItem(value: 'category_', child: Text("Alle Kategorien")), // Zurücksetzen
+                ],
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  decoration: const InputDecoration(
+                    hintText: "Aktivität suchen...",
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.all(Radius.circular(12)),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      searchText = value.toLowerCase();
+                    });
+                  },
+                ),
+              ),
+            ],
           ),
-          onChanged: (value) {
-            setState(() {
-              searchText = value.toLowerCase();
-            });
-          },
         ),
-      ),
-    ],
-  ),
-),
-
         Expanded(
           child: StreamBuilder(
             stream: _firestore.collection('users').doc(userId).collection('activities').snapshots(),
@@ -487,13 +556,13 @@ Widget build(BuildContext context) {
                 return const Center(child: Text("Keine passenden Aktivitäten gefunden."));
               }
 
-
-                return ListView.builder(
-                  itemCount: filteredActivities.length,
-                  itemBuilder: (context, index) {
-                    final activity = filteredActivities[index];
-
-                    return Card(
+              return ListView.builder(
+                itemCount: filteredActivities.length,
+                itemBuilder: (context, index) {
+                  final activity = filteredActivities[index];
+                  return GestureDetector(
+                    onTap: () => _showActivityDetails(activity['id']),
+                    child: Card(
                       elevation: 4,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       child: ListTile(
@@ -569,22 +638,22 @@ Widget build(BuildContext context) {
                             ),
                           ],
                         ),
-                        onTap: () => _showActivityDetails(activity['id']),
                       ),
-                    );
-                  },
-                );
-              },
-            ),
+                    ),
+                  );
+                },
+              );
+            },
           ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        child: const Icon(Icons.add),
-        onPressed: () => _showAddEditDialog(),
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+    floatingActionButton: FloatingActionButton(
+      child: const Icon(Icons.add),
+      onPressed: () => _showAddEditDialog(),
+    ),
+  );
+}
 }
 
 //Gruppenauswahldialog
