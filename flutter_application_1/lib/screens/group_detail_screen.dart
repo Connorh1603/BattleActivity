@@ -66,88 +66,95 @@ class GroupDetailScreen extends StatelessWidget {
                 Text("Mitglieder:", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: members.length,
-                    itemBuilder: (context, index) {
-                      return FutureBuilder<DocumentSnapshot>(
-                        future: FirebaseFirestore.instance.collection('users').doc(members[index]).get(),
-                        builder: (context, userSnapshot) {
-                          if (userSnapshot.connectionState == ConnectionState.waiting) {
-                            return const ListTile(
-                              leading: Icon(Icons.person),
-                              title: Text("Lade..."),
-                            );
-                          }
- 
-                          if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-                            return const ListTile(
-                              leading: Icon(Icons.person),
-                              title: Text("Unbekannt"),
-                            );
-                          }
- 
-                          final data = userSnapshot.data!.data() as Map<String, dynamic>;
-                          final username = data['username'] ?? 'Unbekannt';
-                          final profileUrl = data['profilePictureUrl'] ?? '';
-                          final achievements = (data['achievements'] as List?)?.whereType<Map<String, dynamic>>().toList() ?? [];
- 
-                          // Gruppenkategorie verwenden, um passende Achievements zu filtern
-                          final List<String> learningAchievements = ['Gelernte Minuten', 'Lern-Sessions'];
-                          final List<String> sportAchievements = ['Fitness Freak', 'Workouts absolviert'];
-                          final List<String> runAchievements = ['Lauflegende', 'Läufe abgeschlossen'];
-                          final List<String> musicAchievements = ['Neuer Mozart', 'Musik gespielt'];
-                          final List<String> funAchievements = ['Freiheit', 'Am Chillen'];
- 
-                          List<String> categoryAchievements;
-                          switch (groupType.toLowerCase()) {
-                            case 'lernen':
-                              categoryAchievements = learningAchievements;
-                              break;
-                            case 'sport':
-                              categoryAchievements = sportAchievements;
-                              break;
-                            case 'laufen':
-                              categoryAchievements = runAchievements;
-                              break;
-                            case 'musik':
-                              categoryAchievements = musicAchievements;
-                              break;
-                            case 'freizeit':
-                              categoryAchievements = funAchievements;
-                              break;
-                            default:
-                              categoryAchievements = [];
-                          }
- 
-                          final userCategoryAchievements = achievements
-                              .where((a) => categoryAchievements.contains(a['name']) && (a['badge']?.toString().isNotEmpty ?? false))
-                              .toList();
- 
-                          return Card(
-                            elevation: 3,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                            margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
-                            child: ListTile(
-                              leading: profileUrl.isNotEmpty
-                                  ? CircleAvatar(backgroundImage: NetworkImage(profileUrl), radius: 22)
-                                  : const Icon(Icons.person, size: 28),
-                              title: Text(
-                                username,
-                                style: const TextStyle(fontWeight: FontWeight.w500),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Color.fromARGB(255, 127, 179, 68), // 💚 Heller Grünton für den Hintergrund
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(8.0),
+                    child: ListView.builder(
+                      itemCount: members.length,
+                      itemBuilder: (context, index) {
+                        return FutureBuilder<DocumentSnapshot>(
+                          future: FirebaseFirestore.instance.collection('users').doc(members[index]).get(),
+                          builder: (context, userSnapshot) {
+                            if (userSnapshot.connectionState == ConnectionState.waiting) {
+                              return const ListTile(
+                                leading: Icon(Icons.person),
+                                title: Text("Lade..."),
+                              );
+                            }
+
+                            if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                              return const ListTile(
+                                leading: Icon(Icons.person),
+                                title: Text("Unbekannt"),
+                              );
+                            }
+
+                            final data = userSnapshot.data!.data() as Map<String, dynamic>;
+                            final username = data['username'] ?? 'Unbekannt';
+                            final profileUrl = data['profilePictureUrl'] ?? '';
+                            final achievements = (data['achievements'] as List?)?.whereType<Map<String, dynamic>>().toList() ?? [];
+
+                            // Gruppenkategorie verwenden, um passende Achievements zu filtern
+                            final List<String> learningAchievements = ['Gelernte Minuten', 'Lern-Sessions'];
+                            final List<String> sportAchievements = ['Fitness Freak', 'Workouts absolviert'];
+                            final List<String> runAchievements = ['Lauflegende', 'Läufe abgeschlossen'];
+                            final List<String> musicAchievements = ['Neuer Mozart', 'Musik gespielt'];
+                            final List<String> funAchievements = ['Freiheit', 'Am Chillen'];
+
+                            List<String> categoryAchievements;
+                            switch (groupType.toLowerCase()) {
+                              case 'lernen':
+                                categoryAchievements = learningAchievements;
+                                break;
+                              case 'sport':
+                                categoryAchievements = sportAchievements;
+                                break;
+                              case 'laufen':
+                                categoryAchievements = runAchievements;
+                                break;
+                              case 'musik':
+                                categoryAchievements = musicAchievements;
+                                break;
+                              case 'freizeit':
+                                categoryAchievements = funAchievements;
+                                break;
+                              default:
+                                categoryAchievements = [];
+                            }
+
+                            final userCategoryAchievements = achievements
+                                .where((a) => categoryAchievements.contains(a['name']) && (a['badge']?.toString().isNotEmpty ?? false))
+                                .toList();
+
+                            return Card(
+                              elevation: 3,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                              child: ListTile(
+                                leading: profileUrl.isNotEmpty
+                                    ? CircleAvatar(backgroundImage: NetworkImage(profileUrl), radius: 22)
+                                    : const Icon(Icons.person, size: 28),
+                                title: Text(
+                                  username,
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                                subtitle: userCategoryAchievements.isNotEmpty
+                                    ? Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: userCategoryAchievements.map((a) {
+                                          return Text("${a['name']}: ${a['badge']}", style: const TextStyle(fontSize: 12));
+                                        }).toList(),
+                                      )
+                                    : null,
                               ),
-                              subtitle: userCategoryAchievements.isNotEmpty
-                                  ? Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: userCategoryAchievements.map((a) {
-                                        return Text("${a['name']}: ${a['badge']}", style: const TextStyle(fontSize: 12));
-                                      }).toList(),
-                                    )
-                                  : null,
-                            ),
-                          );
-                        },
-                      );
-                    },
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ),
                 SizedBox(height: 16),
@@ -319,7 +326,7 @@ class GroupDetailScreen extends StatelessWidget {
                       final groupSnapshot = await groupRef.get();
                       final adminId = groupSnapshot['admin'] ?? '';
  
-                      if (adminId == username) {
+                      if (adminId == userId) {
                         _showChangeGroupNameDialog(context);
                       } else {
                         _showNotAdminMessage(context);
@@ -391,7 +398,7 @@ class GroupDetailScreen extends StatelessWidget {
   Future<void> _leaveGroup() async {
     final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
     await groupRef.update({
-      'members': FieldValue.arrayRemove([username])
+      'members': FieldValue.arrayRemove([userId])
     });
     print("$username hat die Gruppe verlassen.");
   }
