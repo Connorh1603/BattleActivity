@@ -1,18 +1,19 @@
 import 'imports.dart';
 
+
+ 
 class GroupDetailScreen extends StatelessWidget {
   final String groupId;
   final String username;
   final String userId;
-
+ 
   const GroupDetailScreen({super.key, required this.groupId, required this.username, required this.userId});
-
+ 
   @override
   Widget build(BuildContext context) {
-    print("DEBUG: Benutzername im Detail-Screen: $username");
-
+ 
     return Scaffold(
-      appBar: AppBar(title: Text('Zurück')),
+      appBar: AppBar(title: Text('Gruppendetails')),
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance.collection('Groups').doc(groupId).get(),
         builder: (context, snapshot) {
@@ -22,14 +23,14 @@ class GroupDetailScreen extends StatelessWidget {
           if (!snapshot.hasData || !snapshot.data!.exists) {
             return Center(child: Text("Gruppe nicht gefunden"));
           }
-
+ 
           final groupData = snapshot.data!;
           final groupName = groupData['name'] ?? 'Unbekannte Gruppe';
+          final groupType = groupData['typ'] ?? 'Kein Typ';
           final adminId = groupData['admin'] ?? '';
-          final groupType = groupData['type'] ?? 'Kein Typ';
           final members = List<String>.from(groupData['members'] ?? []);
           final isAdmin = userId == adminId;
-
+ 
           return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -60,7 +61,7 @@ class GroupDetailScreen extends StatelessWidget {
                     ),
                   ],
                 ),
-
+ 
                 SizedBox(height: 16),
                 Text("Mitglieder:", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                 SizedBox(height: 8),
@@ -77,26 +78,26 @@ class GroupDetailScreen extends StatelessWidget {
                               title: Text("Lade..."),
                             );
                           }
-
+ 
                           if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
                             return const ListTile(
                               leading: Icon(Icons.person),
                               title: Text("Unbekannt"),
                             );
                           }
-
+ 
                           final data = userSnapshot.data!.data() as Map<String, dynamic>;
                           final username = data['username'] ?? 'Unbekannt';
                           final profileUrl = data['profilePictureUrl'] ?? '';
                           final achievements = (data['achievements'] as List?)?.whereType<Map<String, dynamic>>().toList() ?? [];
-
+ 
                           // Gruppenkategorie verwenden, um passende Achievements zu filtern
                           final List<String> learningAchievements = ['Gelernte Minuten', 'Lern-Sessions'];
                           final List<String> sportAchievements = ['Fitness Freak', 'Workouts absolviert'];
                           final List<String> runAchievements = ['Lauflegende', 'Läufe abgeschlossen'];
                           final List<String> musicAchievements = ['Neuer Mozart', 'Musik gespielt'];
                           final List<String> funAchievements = ['Freiheit', 'Am Chillen'];
-
+ 
                           List<String> categoryAchievements;
                           switch (groupType.toLowerCase()) {
                             case 'lernen':
@@ -117,11 +118,11 @@ class GroupDetailScreen extends StatelessWidget {
                             default:
                               categoryAchievements = [];
                           }
-
+ 
                           final userCategoryAchievements = achievements
                               .where((a) => categoryAchievements.contains(a['name']) && (a['badge']?.toString().isNotEmpty ?? false))
                               .toList();
-
+ 
                           return Card(
                             elevation: 3,
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -159,9 +160,9 @@ class GroupDetailScreen extends StatelessWidget {
                         child: Center(child: CircularProgressIndicator()),
                       );
                     }
-
+ 
                     final data = snapshot.data;
-
+ 
                     if (data == null) {
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -173,18 +174,18 @@ class GroupDetailScreen extends StatelessWidget {
                         ),
                       );
                     }
-
+ 
                     final username = data['username'];
                     final duration = data['duration'];
                     final timestamp = data['timestamp'] as DateTime;
-
+ 
                     final diff = DateTime.now().difference(timestamp);
                     final String timeAgo = diff.inDays > 0
                         ? "vor ${diff.inDays} Tag(en)"
                         : diff.inHours > 0
                             ? "vor ${diff.inHours} Stunde(n)"
                             : "gerade eben";
-
+ 
                     return Card(
                       color: Colors.orange.shade50,
                       elevation: 4,
@@ -211,12 +212,12 @@ class GroupDetailScreen extends StatelessWidget {
                       if (!leaderboardSnapshot.hasData || leaderboardSnapshot.data!.isEmpty) {
                         return Center(child: Text("Keine Leaderboard-Daten verfügbar."));
                       }
-
+ 
                       final leaderboardData = leaderboardSnapshot.data!;
                       final maxY = leaderboardData
                           .map((e) => (e['valueMonthly'] as num?)?.toDouble() ?? 0.0)
                           .fold<double>(0.0, (a, b) => a > b ? a : b);
-
+ 
                       return Padding(
                         padding: const EdgeInsets.only(left: 16.0, right: 22.0), // ⬅️ Abstand links & rechts
                         child: BarChart(
@@ -226,7 +227,7 @@ class GroupDetailScreen extends StatelessWidget {
                             barGroups: leaderboardData.asMap().entries.map((entry) {
                               final index = entry.key;
                               final user = entry.value;
-
+ 
                               return BarChartGroupData(
                                 x: index,
                                 barsSpace: 12,
@@ -317,7 +318,7 @@ class GroupDetailScreen extends StatelessWidget {
                       final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
                       final groupSnapshot = await groupRef.get();
                       final adminId = groupSnapshot['admin'] ?? '';
-
+ 
                       if (adminId == username) {
                         _showChangeGroupNameDialog(context);
                       } else {
@@ -342,24 +343,24 @@ class GroupDetailScreen extends StatelessWidget {
       ),
     );
   }
-
+ 
   Future<List<Map<String, dynamic>>> _getLeaderboardData(List<String> members) async {
     DateTime now = DateTime.now();
     DateTime startOfMonth = DateTime(now.year, now.month, 1);
-
+ 
     List<Map<String, dynamic>> leaderboard = [];
-
+ 
     for (String user in members) {
       int totalDuration = 0;
       final userActivitiesRef = FirebaseFirestore.instance
           .collection('users')
           .doc(user)
           .collection('activities');
-
+ 
       final snapshot = await userActivitiesRef
           .where('timestamp', isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch)
           .get();
-
+ 
       for (var doc in snapshot.docs) {
         final data = doc.data();
         final duration = (data['duration'] as num?)?.toInt() ?? 0;
@@ -367,26 +368,26 @@ class GroupDetailScreen extends StatelessWidget {
         final groupIds = rawGroupIds is List
             ? rawGroupIds.whereType<String>().toList()
             : <String>[];
-
-
+ 
+ 
         if (groupIds.contains(groupId)) {
           totalDuration += duration;
         }
       }
-
+ 
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(user).get();
       final username = userDoc.data()?['username'] ?? 'Unbekannt';
-
+ 
       leaderboard.add({
         'user': username,
         'valueMonthly': totalDuration,
       });
     }
-
+ 
     return leaderboard;
   }
-
-
+ 
+ 
   Future<void> _leaveGroup() async {
     final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
     await groupRef.update({
@@ -394,7 +395,7 @@ class GroupDetailScreen extends StatelessWidget {
     });
     print("$username hat die Gruppe verlassen.");
   }
-
+ 
   void _showNotAdminMessage(BuildContext context) {
     showDialog(
       context: context,
@@ -408,21 +409,21 @@ class GroupDetailScreen extends StatelessWidget {
   Future<Map<String, dynamic>?> _getLatestActivityInfo(List<String> members) async {
     DateTime now = DateTime.now();
     DateTime startOfMonth = DateTime(now.year, now.month, 1);
-
+ 
     Map<String, dynamic>? latestActivity;
     DateTime? latestTimestamp;
-
+ 
     for (String userId in members) {
       final activitiesRef = FirebaseFirestore.instance
           .collection('users')
           .doc(userId)
           .collection('activities');
-
+ 
       final snapshot = await activitiesRef
           .where('timestamp', isGreaterThanOrEqualTo: startOfMonth.millisecondsSinceEpoch)
           .orderBy('timestamp', descending: true)
           .get();
-
+ 
       for (var doc in snapshot.docs) {
         final data = doc.data();
         final duration = (data['duration'] as num?)?.toInt() ?? 0;
@@ -430,32 +431,32 @@ class GroupDetailScreen extends StatelessWidget {
         final groupIds = rawGroupIds is List
             ? rawGroupIds.whereType<String>().toList()
             : <String>[];
-
+ 
         final rawTimestamp = data['timestamp'];
         final timestamp = rawTimestamp is int
             ? DateTime.fromMillisecondsSinceEpoch(rawTimestamp)
             : null;
-
+ 
         if (groupIds.contains(groupId) && timestamp != null) {
           if (latestTimestamp == null || timestamp.isAfter(latestTimestamp)) {
             final userDoc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
             final username = userDoc.data()?['username'] ?? 'Unbekannt';
-
+ 
             latestActivity = {
               'username': username,
               'timestamp': timestamp,
               'duration': duration,
             };
-
+ 
             latestTimestamp = timestamp;
           }
         }
       }
     }
-
+ 
     return latestActivity;
   }
-
+ 
   void _showAddMemberDialog(BuildContext context, bool isAdmin) {
     showDialog(
       context: context,
@@ -491,10 +492,10 @@ class GroupDetailScreen extends StatelessWidget {
       },
     );
   }
-
+ 
   void _showChangeGroupNameDialog(BuildContext context) {
     final TextEditingController nameController = TextEditingController();
-
+ 
     showDialog(
       context: context,
       builder: (context) {
@@ -522,7 +523,7 @@ class GroupDetailScreen extends StatelessWidget {
       },
     );
   }
-
+ 
   Future<void> _changeGroupName(String newName) async {
     final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
     await groupRef.update({'name': newName});
