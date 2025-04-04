@@ -1,4 +1,5 @@
 import 'imports.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -437,7 +438,6 @@ body: Column(
 }
 }
 
-//Dialogfenster für Einstellungen
 class SettingsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -471,7 +471,16 @@ class SettingsDialog extends StatelessWidget {
                 },
               ),
               ListTile(title: Text('Help and Support')),
-              ListTile(title: Text('Feedback')),
+              ListTile(
+                title: Text('Feedback'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (context) => FeedbackDialog(),
+                  );
+                },
+              ),
               ListTile(
                 title: Text('FAQ'),
                 onTap: () {
@@ -915,6 +924,96 @@ class _FAQDialogState extends State<FAQDialog> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class FeedbackDialog extends StatefulWidget {
+  @override
+  _FeedbackDialogState createState() => _FeedbackDialogState();
+}
+
+class _FeedbackDialogState extends State<FeedbackDialog> {
+  final _subjectController = TextEditingController();
+  final _messageController = TextEditingController();
+  final _userNameController = TextEditingController();
+  final _userEmailController = TextEditingController();
+  String _userName = '';
+  String _userEmail = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      setState(() {
+        _userName = '${doc['firstName']} ${doc['lastName']}';
+        _userEmail = doc['email'];
+        _userNameController.text = _userName;
+        _userEmailController.text = _userEmail;
+      });
+    }
+  }
+
+  Future<void> _sendFeedback() async {
+    try {
+      final callable = FirebaseFunctions.instance.httpsCallable('sendemail');
+      await callable.call({
+        'name': _userNameController.text,
+        'email': _userEmailController.text,
+        'subject': _subjectController.text,
+        'message': _messageController.text,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Feedback erfolgreich gesendet!')),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler beim Senden des Feedbacks')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Feedback senden'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _userNameController,
+            decoration: InputDecoration(labelText: 'Name'),
+            readOnly: true, // Optional, falls nicht editierbar sein soll
+          ),
+          TextField(
+            controller: _userEmailController,
+            decoration: InputDecoration(labelText: 'E-Mail'),
+            readOnly: true, // Optional, falls nicht editierbar sein soll
+          ),
+          TextField(
+            controller: _subjectController,
+            decoration: InputDecoration(labelText: 'Betreff'),
+            maxLength: 50,
+          ),
+          TextField(
+            controller: _messageController,
+            decoration: InputDecoration(labelText: 'Nachricht'),
+            maxLines: 5,
+            maxLength: 500,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text('Abbrechen')),
+        ElevatedButton(onPressed: _sendFeedback, child: Text('Absenden')),
+      ],
     );
   }
 }
