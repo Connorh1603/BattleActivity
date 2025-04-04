@@ -371,89 +371,80 @@ Widget build(BuildContext context) {
       ),
     );
   }
-
-  return Scaffold(
-    appBar: PreferredSize(
-      preferredSize: Size.fromHeight(70), // Höhe der AppBar erhöhen
-      child: Container(
-        decoration: BoxDecoration(
-          color: Color.fromARGB(255, 127, 179, 68), // Hintergrundfarbe Grün
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey[300] ?? Colors.grey, // Schattenfarbe
-              blurRadius: 5, // Schattenradius
-              offset: Offset(0, 2), // Schattenposition
-            ),
-          ],
-          borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)), // Ecken der Navigationsleiste abrunden
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Row(
+    return Scaffold(
+            appBar: PreferredSize(
+        preferredSize: Size.fromHeight(120),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Color.fromARGB(255, 127, 179, 68),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey[300] ?? Colors.grey,
+                blurRadius: 5,
+                offset: Offset(0, 2),
+              ),
+            ],
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 10),
+          child: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                IconButton(
-                  icon: Icon(Icons.arrow_back, size: 30, color: Colors.white), // Zurück-Button weiß
-                  onPressed: () => Navigator.pop(context),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(Icons.arrow_back, size: 30, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                    Text('Zurück', style: TextStyle(fontSize: 20, color: Colors.white)),
+                  ],
                 ),
-                Text('Zurück', style: TextStyle(fontSize: 20, color: Colors.white)), // Zurück-Text weiß
+                SizedBox(height: 8),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isSmall = constraints.maxWidth < 400;
+                    return Wrap(
+                      alignment: WrapAlignment.spaceEvenly,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton(
+                          onPressed: () => Navigator.pushNamed(context, '/archievement'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color.fromARGB(255, 100, 150, 60),
+                            foregroundColor: Colors.white,
+                            minimumSize: Size(isSmall ? 100 : 120, 40),
+                          ),
+                          child: Text('Erfolge', style: TextStyle(fontSize: 18)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pushNamed(context, '/group'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color.fromARGB(255, 100, 150, 60),
+                            foregroundColor: Colors.white,
+                            minimumSize: Size(isSmall ? 100 : 120, 40),
+                          ),
+                          child: Text('Gruppen', style: TextStyle(fontSize: 18)),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pushNamed(context, '/profile'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color.fromARGB(255, 100, 150, 60),
+                            foregroundColor: Colors.white,
+                            minimumSize: Size(isSmall ? 100 : 120, 40),
+                          ),
+                          child: Text('Profil', style: TextStyle(fontSize: 18)),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
-            Expanded(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/archievement'); // Navigiere zur Archivments-Seite
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
-                          foregroundColor: Colors.white, // Schriftfarbe Weiß
-                        ),
-                        child:
-                            Text('Erfolge', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
-                      ),
-                      ElevatedButton(
-                        onPressed: () {
-                          Navigator.pushNamed(context, '/group'); // Navigiere zur Gruppen-Seite
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor:
-                              const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
-                          foregroundColor: Colors.white, // Schriftfarbe Weiß
-                        ),
-                        child:
-                            Text('Gruppen', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
-                      ),
-                    ],
-                  ),
-                  Positioned(
-                    top: 0,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/profile'); // Navigiere zur Profil-Seite
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
-                        foregroundColor: Colors.white, // Schriftfarbe Weiß
-                      ),
-                      child:
-                          Text('Profil', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ),
       ),
-    ),
     body: Column(
       children: [
         Padding(
