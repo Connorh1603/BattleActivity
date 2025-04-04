@@ -565,76 +565,83 @@ Widget build(BuildContext context) {
                     child: Card(
                       elevation: 4,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      child: ListTile(
-                        leading: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: (activity['imageUrl'] ?? '').isNotEmpty
-                              ? GestureDetector(
-                                  onTap: () {
-                                    showDialog(
+                      margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Bild links
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: (activity['imageUrl'] ?? '').isNotEmpty
+                                  ? Image.network(
+                                activity['imageUrl'],
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                                  : Container(
+                                width: 50,
+                                height: 50,
+                                color: Colors.grey[300],
+                                child: const Icon(Icons.image, size: 24),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // Titel + Kategorie + Dauer + Erstellungsdatum
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    activity['title'] ?? '',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "${activity['category']} • ${activity['duration']} min",
+                                    style: const TextStyle(fontSize: 14, color: Colors.grey),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    "Erstellt am: ${DateTime.fromMillisecondsSinceEpoch(activity['timestamp']).toString().split(' ').first}",
+                                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            // Buttons
+                            const SizedBox(width: 8),
+                            Column(
+                              children: [
+                                IconButton(
+                                  icon: const Icon(Icons.edit, color: Colors.blue),
+                                  onPressed: () =>
+                                      _showAddEditDialog(activityId: activity['id'], existingData: activity.cast()),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.delete, color: Colors.red),
+                                  onPressed: () => _deleteActivity(activity['id']),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.more_vert),
+                                  onPressed: () async {
+                                    await showDialog(
                                       context: context,
                                       builder: (context) {
-                                        return Dialog(
-                                          child: InteractiveViewer(
-                                            child: Image.network(
-                                              activity['imageUrl'],
-                                              fit: BoxFit.contain, // Zeigt das gesamte Bild an
-                                              width: MediaQuery.of(context).size.width * 0.8, // Breite auf 80% des Bildschirms setzen
-                                              height: MediaQuery.of(context).size.height * 0.6, // Höhe auf 60% des Bildschirms setzen
-                                            ),
-                                          ),
+                                        return GroupSelectionDialog(
+                                          activityId: activity['id'],
+                                          firestore: _firestore,
+                                          auth: _auth,
                                         );
                                       },
                                     );
                                   },
-                                  child: Image.network(
-                                    activity['imageUrl'],
-                                    width: 50,
-                                    height: 50,
-                                    fit: BoxFit.cover,
-                                  ),
-                                )
-                              : Container(
-                                  width: 50,
-                                  height: 50,
-                                  color: Colors.grey[300],
-                                  child: const Icon(Icons.image, size: 24),
                                 ),
-                        ),
-                        title: Text(activity['title'] ?? '', style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text("${activity['category']} • ${activity['duration']} min"),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              "Erstellt am: ${DateTime.fromMillisecondsSinceEpoch(activity['timestamp']).toString().split(' ').first}",
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () => _showAddEditDialog(activityId: activity['id'], existingData: activity.cast()),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () => _deleteActivity(activity['id']),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              icon: const Icon(Icons.more_vert),
-                              onPressed: () async {
-                                await showDialog(
-                                  context: context,
-                                  builder: (context) {
-                                    return GroupSelectionDialog(
-                                      activityId: activity['id'],
-                                      firestore: _firestore,
-                                      auth: _auth,
-                                    );
-                                  },
-                                );
-                              },
+                              ],
                             ),
                           ],
                         ),
