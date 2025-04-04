@@ -59,8 +59,8 @@ class _LoginScreenState extends State<LoginScreen> {
       // Initialisiere GoogleSignIn explizit mit der Web-Client-ID
       GoogleSignInPlatform.instance.initWithParams(
         const SignInInitParameters(
-          clientId: '712873519787-2haf5r93a82upjh2q34h1che81fgflsv.apps.googleusercontent.com ',
-          serverClientId: '712873519787-2haf5r93a82upjh2q34h1che81fgflsv.apps.googleusercontent.com ',
+          clientId: '712873519787-2haf5r93a82upjh2q34h1che81fgflsv.apps.googleusercontent.com',
+          serverClientId: '712873519787-2haf5r93a82upjh2q34h1che81fgflsv.apps.googleusercontent.com',
         ),
       );
     }
