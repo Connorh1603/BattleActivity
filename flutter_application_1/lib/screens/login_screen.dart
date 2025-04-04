@@ -1,9 +1,20 @@
-import 'package:flutter/material.dart';
+import 'imports.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
-import 'package:google_sign_in_platform_interface/google_sign_in_platform_interface.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class SessionManager {
+  static const String _lastActiveKey = 'lastActiveTime';
+
+  static Future<void> updateLastActiveTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setInt(_lastActiveKey, DateTime.now().millisecondsSinceEpoch);
+  }
+
+  static Future<int?> getLastActiveTime() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getInt(_lastActiveKey);
+  }
+}
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,6 +27,24 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _resetEmailController = TextEditingController();
+
+  Future<void> _checkSession() async {
+    final lastActiveTime = await SessionManager.getLastActiveTime();
+    if (lastActiveTime != null) {
+      final currentTime = DateTime.now().millisecondsSinceEpoch;
+      final timeDiff = (currentTime - lastActiveTime) / 1000; // Sekunden
+      if (timeDiff > 360) {
+        await FirebaseAuth.instance.signOut();
+        // Benutzer wurde abgemeldet
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _checkSession();
+  }
 
   @override
   void dispose() {
@@ -36,86 +65,120 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     }
   }
+  //Google Sign-In für Web
+  Future _signInWithGoogle() async {
+  try {
+    if (kIsWeb) {
+      // Initialisiere GoogleSignIn für Web
+      await _initializeGoogleSignIn();
 
-  Future<void> _signInWithGoogle() async {
-    try {
-      if (kIsWeb) {
-        // Initialisiere GoogleSignIn für Web
-        await _initializeGoogleSignIn();
+      final GoogleSignIn googleSignIn = GoogleSignIn();
 
-        final GoogleSignIn googleSignIn = GoogleSignIn();
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
 
-        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-
-        if (googleUser == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Google sign-in cancelled by user')),
-          );
-          return;
-        }
-
-        final GoogleSignInAuthentication googleAuth =
-            await googleUser.authentication;
-
-        final OAuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
+      if (googleUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in cancelled by user')),
         );
+        return;
+      }
 
-        await FirebaseAuth.instance.signInWithCredential(credential);
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
 
-        // Überprüfe, ob die E-Mail-Adresse bereits existiert
-        final User? user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          if (user.emailVerified) {
-            Navigator.pushNamed(context, '/archievement');
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Please verify your email address.')),
-            );
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
+      // Überprüfe, ob die E-Mail-Adresse bereits existiert
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        if (user.emailVerified) {
+          // Generiere einen Standard-Benutzernamen
+          final String username = 'user_${user.uid.substring(0, 8)}';
+
+          // Überprüfe, ob der Benutzer bereits in Firestore existiert
+          final FirebaseFirestore firestore = FirebaseFirestore.instance;
+          final DocumentSnapshot doc = await firestore.collection('users').doc(user.uid).get();
+          if (!doc.exists) {
+            // Benutzer in Firestore anlegen
+            await firestore.collection('users').doc(user.uid).set({
+              'firstName': '', // Leere Zeichenfolge für Firstname
+              'lastName': '', // Leere Zeichenfolge für Lastname
+              'username': username,
+              'email': user.email,
+              'profilePictureUrl': '',
+            });
           }
-        }
-      } else {
-        // Mobile Implementierung bleibt unverändert
-        final GoogleSignIn googleSignIn = GoogleSignIn();
 
-        final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
-
-        if (googleUser == null) {
+          Navigator.pushNamed(context, '/archievement');
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Google sign-in cancelled by user')),
+            SnackBar(content: Text('Please verify your email address.')),
           );
-          return;
-        }
-
-        final GoogleSignInAuthentication googleAuth =
-            await googleUser.authentication;
-
-        final OAuthCredential credential = GoogleAuthProvider.credential(
-          accessToken: googleAuth.accessToken,
-          idToken: googleAuth.idToken,
-        );
-
-        await FirebaseAuth.instance.signInWithCredential(credential);
-
-        // Überprüfe, ob die E-Mail-Adresse bereits existiert
-        final User? user = FirebaseAuth.instance.currentUser;
-        if (user != null) {
-          if (user.emailVerified) {
-            Navigator.pushNamed(context, '/archievement');
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Please verify your email address.')),
-            );
-          }
         }
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Google sign-in failed: $e')),
+    } else {
+      // Mobile Implementierung bleibt unverändert
+      final GoogleSignIn googleSignIn = GoogleSignIn();
+
+      final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
+
+      if (googleUser == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google sign-in cancelled by user')),
+        );
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
+
+      await FirebaseAuth.instance.signInWithCredential(credential);
+
+      // Überprüfe, ob die E-Mail-Adresse bereits existiert
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        if (user.emailVerified) {
+          // Generiere einen Standard-Benutzernamen
+          final String username = 'user_${user.uid.substring(0, 8)}';
+
+          // Überprüfe, ob der Benutzer bereits in Firestore existiert
+          final FirebaseFirestore firestore = FirebaseFirestore.instance;
+          final DocumentSnapshot doc = await firestore.collection('users').doc(user.uid).get();
+          if (!doc.exists) {
+            // Benutzer in Firestore anlegen
+            await firestore.collection('users').doc(user.uid).set({
+              'firstName': '', // Leere Zeichenfolge für Firstname
+              'lastName': '', // Leere Zeichenfolge für Lastname
+              'username': username,
+              'email': user.email,
+              'profilePictureUrl': '',
+            });
+          }
+
+          Navigator.pushNamed(context, '/archievement');
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Please verify your email address.')),
+          );
+        }
+      }
     }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Google sign-in failed: $e')),
+    );
   }
+}
 
   Future<void> _loginWithUsernameAndPassword() async {
     try {
@@ -142,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (userCredential.user?.emailVerified ?? false) {
-        Navigator.pushNamed(context, '/archievement');
+        Navigator.pushNamed(context, '/profile');
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Please verify your email address before logging in.')),
@@ -194,71 +257,86 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Login')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Card(
-                elevation: 5,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    children: [
-                      TextField(
-                        controller: _usernameController,
-                        decoration: InputDecoration(
-                          labelText: 'Username',
-                          border: OutlineInputBorder(),
-                        ),
-                      ),
-                      SizedBox(height: 10),
-                      TextField(
-                        controller: _passwordController,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          border: OutlineInputBorder(),
-                        ),
-                        obscureText: true,
-                      ),
-                      TextButton(
-                        onPressed: _resetPassword,
-                        child: Text('Forgot Password'),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: _loginWithUsernameAndPassword,
-                child: Text('Login'),
-              ),
-              SizedBox(height: 10),
-              ElevatedButton(
-                onPressed:
-                    kIsWeb ? _signInWithGoogle : _signInWithGoogle,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+Widget build(BuildContext context) {
+  SessionManager.updateLastActiveTime();
+  return Scaffold(
+    body: Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            Image.asset(
+              'assets/BattleActivity_Logo.png',
+              width: 350, // Breite des Logos
+              height: 350, // Höhe des Logos
+            ),
+            SizedBox(height: 20), // Abstand nach dem Logo
+            Card(
+              elevation: 5,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
                   children: [
-                    Image.asset('assets/google_logo.png', height: 24),
-                    SizedBox(width: 10),
-                    Text('Login with Google'),
+                    TextField(
+                      controller: _usernameController,
+                      decoration: InputDecoration(
+                        labelText: 'Username',
+                        border: OutlineInputBorder(),
+                      ),
+                      onSubmitted: (value) => _loginWithUsernameAndPassword(),
+                    ),
+                    SizedBox(height: 10),
+                    TextField(
+                      controller: _passwordController,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      obscureText: true,
+                      onSubmitted: (value) => _loginWithUsernameAndPassword(),
+                    ),
+                    TextButton(
+                      onPressed: _resetPassword,
+                      child: Text('Forgot Password'),
+                    ),
                   ],
                 ),
               ),
-              SizedBox(height: 10),
-              TextButton(
-                onPressed: () => Navigator.pushNamed(context, '/signup'),
-                child: Text('No account yet? Sign up here'),
+            ),
+            SizedBox(height: 20),
+            ElevatedButton(
+  onPressed: _loginWithUsernameAndPassword,
+  style: ElevatedButton.styleFrom(
+    minimumSize: Size(150, 50), // Größe des Buttons
+    backgroundColor: Color.fromARGB(255, 127, 179, 68), // Hintergrundfarbe
+    foregroundColor: Colors.white, // Schriftfarbe
+  ),
+  child: Text(
+    'Login',
+    style: TextStyle(fontSize: 20), // Schriftgröße
+  ),
+),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: kIsWeb ? _signInWithGoogle : _signInWithGoogle,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Image.asset('assets/google_logo.png', height: 24),
+                  SizedBox(width: 10),
+                  Text('Login with Google'),
+                ],
               ),
-            ],
-          ),
+            ),
+            SizedBox(height: 10),
+            TextButton(
+              onPressed: () => Navigator.pushNamed(context, '/signup'),
+              child: Text('No account yet? Sign up here'),
+            ),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

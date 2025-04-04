@@ -1,10 +1,4 @@
-// profile_screen.dart
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:file_picker/file_picker.dart';
-import 'dart:typed_data';
+import 'imports.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -85,13 +79,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Profile'),
-      ),
-      body: SingleChildScrollView(
+  
+
+@override
+Widget build(BuildContext context) {
+  return Scaffold(
+appBar: PreferredSize(
+  preferredSize: Size.fromHeight(70), // Höhe der AppBar erhöhen
+  child: Container(
+    decoration: BoxDecoration(
+      color: Color.fromARGB(255, 127, 179, 68), // Hintergrundfarbe Grün
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey[300] ?? Colors.grey, // Schattenfarbe
+          blurRadius: 5, // Schattenradius
+          offset: Offset(0, 2), // Schattenposition
+        ),
+      ],
+      borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)), // Ecken der Navigationsleiste abrunden
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.arrow_back, size: 30, color: Colors.white), // Zurück-Button weiß
+              onPressed: () => Navigator.pop(context),
+            ),
+            Text('Zurück', style: TextStyle(fontSize: 20, color: Colors.white)), // Zurück-Text weiß
+          ],
+        ),
+        Expanded(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/archievement'); // Navigiere zur Archivments-Seite
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                      foregroundColor: Colors.white, // Schriftfarbe Weiß
+                    ),
+                    child:
+                        Text('Erfolge', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/activity'); // Navigiere zur Aktivitäten-Seite
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                      foregroundColor: Colors.white, // Schriftfarbe Weiß
+                    ),
+                    child:
+                        Text('Aktivitäten', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                  ),
+                ],
+              ),
+              Positioned(
+                top: 0,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/group'); // Navigiere zur Gruppen-Seite
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                    foregroundColor: Colors.white, // Schriftfarbe Weiß
+                  ),
+                  child:
+                      Text('Gruppen', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
+),
+body: Column(
+  children: [
+    Expanded(
+      child: SingleChildScrollView(
         child: Column(
           children: [
             // Benutzername und andere Informationen
@@ -150,18 +227,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 IconButton(icon: Icon(Icons.settings), onPressed: () => showDialog(context: context, builder: (context) => SettingsDialog())),
               ],
             ),
+            SizedBox(height: 10), // Abstand zwischen Benutzername und Abmeldebutton
+            ElevatedButton(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                Navigator.pushNamed(context, '/login');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red, // Hintergrundfarbe Rot
+                foregroundColor: Colors.white, // Schriftfarbe Weiß
+                minimumSize: Size(150, 50), // Größe des Buttons
+              ),
+              child: Text('Abmelden', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+            ),
             SizedBox(height: 20),
             // Activities-Bereich
             Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey),
+                color: Color.fromARGB(255, 127, 179, 68), // Hintergrundfarbe ändern
+                borderRadius: BorderRadius.circular(10), // Ecken abrunden
               ),
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Letzte 3 Aktivitäten", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    "Letzte 3 Aktivitäten",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white), // Schriftfarbe Weiß
+                  ),
                   SizedBox(height: 10),
                   StreamBuilder(
                     stream: _firestore
@@ -174,7 +267,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     builder: (context, snapshot) {
                       if (snapshot.hasData) {
                         if (snapshot.data!.docs.isEmpty) {
-                          return Center(child: Text("No activities found"));
+                          return Center(child: Text("No activities found", style: TextStyle(color: Colors.white))); // Schriftfarbe Weiß
                         }
                         return ListView.builder(
                           shrinkWrap: true,
@@ -194,18 +287,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         color: Colors.grey[300],
                                         child: const Icon(Icons.image, size: 24),
                                       ),
-                                title: Text(activity.get('title'), style: TextStyle(fontWeight: FontWeight.bold)),
-                                subtitle: Text(activity.get('description')),
+                                title: Text(activity.get('title'), style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)), // Schriftfarbe Schwarz
+                                subtitle: Text(activity.get('description'), style: TextStyle(color: Colors.black)), // Schriftfarbe Schwarz
                                 trailing: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
                                       "Erstellt am: ${DateTime.fromMillisecondsSinceEpoch(activity.get('timestamp')).toString().split(' ').first}",
-                                      style: TextStyle(fontSize: 12),
+                                      style: TextStyle(fontSize: 12, color: Colors.black), // Schriftfarbe Schwarz
                                     ),
                                     Text(
                                       "Geändert am: ${DateTime.fromMillisecondsSinceEpoch(activity.get('updatedTimestamp') ?? activity.get('timestamp')).toString().split(' ').first}",
-                                      style: TextStyle(fontSize: 12),
+                                      style: TextStyle(fontSize: 12, color: Colors.black), // Schriftfarbe Schwarz
                                     ),
                                   ],
                                 ),
@@ -225,34 +318,61 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Rewards-Bereich
             Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.grey),
+                color: Color.fromARGB(255, 127, 179, 68), // Hintergrundfarbe ändern
+                borderRadius: BorderRadius.circular(10), // Ecken abrunden
               ),
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Rewards", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  Text(
+                    "Rewards",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white), // Schriftfarbe Weiß
+                  ),
                   SizedBox(height: 10),
                   StreamBuilder(
-                    stream: _firestore.collection('rewards').where('userId', isEqualTo: _auth.currentUser?.uid).snapshots(),
+                    stream: _firestore.collection('users').doc(_auth.currentUser?.uid).snapshots(),
                     builder: (context, snapshot) {
                       if (snapshot.hasData) {
-                        if (snapshot.data!.docs.isEmpty) {
-                          return Center(child: Text("No rewards found"));
+                        final userData = snapshot.data!.data();
+                        if (userData != null && userData.containsKey('achievements')) {
+                          final achievements = userData['achievements'] as List<dynamic>;
+                          if (achievements.isEmpty) {
+                            return Center(child: Text("No rewards found", style: TextStyle(color: Colors.white))); // Schriftfarbe Weiß
+                          }
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            itemCount: achievements.length,
+                            itemBuilder: (context, index) {
+                              final achievement = achievements[index] as Map<String, dynamic>;
+                              return Container(
+                                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                                padding: const EdgeInsets.all(12.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[200], // Hintergrundfarbe Grau
+                                  border: Border.all(color: Colors.grey), // Rahmenfarbe Grau
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      achievement['name'],
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black), // Schriftfarbe Schwarz
+                                    ),
+                                    Image.asset(
+                                      '${achievement['badge'].toLowerCase()}.png',
+                                      width: 50,
+                                      height: 50,
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        } else {
+                          return Center(child: Text("No rewards found", style: TextStyle(color: Colors.white))); // Schriftfarbe Weiß
                         }
-                        return ListView.builder(
-                          shrinkWrap: true,
-                          itemCount: snapshot.data!.docs.length,
-                          itemBuilder: (context, index) {
-                            final reward = snapshot.data!.docs[index];
-                            return ListTile(
-                              title: Text(reward.get('name')),
-                              subtitle: Text(reward.get('description')),
-                              trailing: Text("${reward.get('points')} Points"),
-                            );
-                          },
-                        );
                       } else {
                         return Center(child: CircularProgressIndicator());
                       }
@@ -264,10 +384,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  ],
+),
+  );
+}
 }
 
+//Dialogfenster für Einstellungen
 class SettingsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -276,20 +400,463 @@ class SettingsDialog extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           ListTile(title: Text('Languages')),
-          ListTile(title: Text('Profile')),
+          ListTile(
+            title: Text('Profile'),
+            onTap: () async {
+              Navigator.of(context).pop();
+              await showDialog(
+                context: context,
+                builder: (context) => ChangeProfileDialog(),
+              );
+            },
+          ),
           ListTile(title: Text('Settings')),
           ExpansionTile(
             title: Text('About BattleActivity'),
             children: [
-              ListTile(title: Text('About BattleActivity')),
+              ListTile(
+                title: Text('About BattleActivity'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (context) => const AboutDialogMarkdown(),
+                  );
+                },
+              ),
               ListTile(title: Text('Help and Support')),
               ListTile(title: Text('Feedback')),
-              ListTile(title: Text('Frequently asked questions')),
-              ListTile(title: Text('Terms of Use')),
-              ListTile(title: Text('Privacy Policy')),
+              ListTile(
+                title: Text('FAQ'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (context) => const FAQDialog(),
+                  );
+                },
+              ),              ListTile(
+                title: Text('Terms of Use'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (context) => const TermsOfUseDialog(),
+                  );
+                },
+              ),
+              ListTile(
+                title: Text('Privacy Policy'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (context) => const PrivacyPolicyDialog(),
+                  );
+                },
+              ),
             ],
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Dialog zum Profil ändern
+class ChangeProfileDialog extends StatefulWidget {
+  @override
+  State<ChangeProfileDialog> createState() => _ChangeProfileDialogState();
+}
+
+class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
+  final _usernameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProfileData() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final DocumentSnapshot doc = await firestore.collection('users').doc(user.uid).get();
+      if (doc.exists) {
+        setState(() {
+          _usernameController.text = doc.get('username') ?? '';
+          _firstNameController.text = doc.get('firstName') ?? '';
+          _lastNameController.text = doc.get('lastName') ?? '';
+        });
+      }
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileData();
+  }
+
+  Future<void> _updateProfile() async {
+    try {
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      final User? user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await firestore.collection('users').doc(user.uid).update({
+          'username': _usernameController.text,
+          'firstName': _firstNameController.text,
+          'lastName': _lastNameController.text,
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Updated')),
+        );
+        Navigator.of(context).pop(); // Schließe das Fenster
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: EdgeInsets.all(16), // Reduziert den Abstand zwischen dem Dialog und dem Bildschirmrand
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: 300), // Setzt die maximale Breite des Dialogs
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Update Profile'),
+              TextField(
+                controller: _usernameController,
+                decoration: InputDecoration(
+                  labelText: 'Username',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 10), // Abstand zwischen den Textfeldern
+              TextField(
+                controller: _firstNameController,
+                decoration: InputDecoration(
+                  labelText: 'First Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 10), // Abstand zwischen den Textfeldern
+              TextField(
+                controller: _lastNameController,
+                decoration: InputDecoration(
+                  labelText: 'Last Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              SizedBox(height: 10), // Abstand zwischen dem letzten Textfeld und dem Button
+              ElevatedButton(
+                onPressed: _updateProfile,
+                child: Text('Update'), // Button-Text auf "Update" geändert
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// About BattleActivity Dialog
+class AboutDialogMarkdown extends StatefulWidget {
+  const AboutDialogMarkdown({super.key});
+
+  @override
+  State<AboutDialogMarkdown> createState() => _AboutDialogMarkdownState();
+}
+
+class _AboutDialogMarkdownState extends State<AboutDialogMarkdown> {
+  String _markdownText = '';
+
+  Future<void> _loadMarkdown() async {
+    try {
+      final fileContent = await rootBundle.loadString('about.md');
+      setState(() {
+        _markdownText = fileContent;
+      });
+    } catch (e) {
+      print('Fehler beim Laden der Datei: $e');
+      setState(() {
+        _markdownText = 'Fehler beim Laden der Datei.';
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMarkdown();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            MarkdownBody(data: _markdownText),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Schließen'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Terms of Use Dialog
+class TermsOfUseDialog extends StatefulWidget {
+  const TermsOfUseDialog({super.key});
+
+  @override
+  State<TermsOfUseDialog> createState() => _TermsOfUseDialogState();
+}
+
+class _TermsOfUseDialogState extends State<TermsOfUseDialog> {
+  String _markdownText = '';
+
+  Future<void> _loadMarkdown() async {
+    try {
+      final fileContent = await rootBundle.loadString('terms_of_use.md');
+      setState(() {
+        _markdownText = fileContent;
+      });
+    } catch (e) {
+      print('Fehler beim Laden der Nutzungsbedingungen: $e');
+      setState(() {
+        _markdownText = 'Fehler beim Laden der Nutzungsbedingungen.';
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMarkdown();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Expanded(
+              child: Markdown(
+                data: _markdownText,
+                shrinkWrap: true,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Schließen'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// Privacy Policy Dialog
+class PrivacyPolicyDialog extends StatefulWidget {
+  const PrivacyPolicyDialog({super.key});
+
+  @override
+  State<PrivacyPolicyDialog> createState() => _PrivacyPolicyDialogState();
+}
+
+class _PrivacyPolicyDialogState extends State<PrivacyPolicyDialog> {
+  String _markdownText = '';
+
+  Future<void> _loadMarkdown() async {
+    try {
+      final fileContent = await rootBundle.loadString('privacy_policy.md');
+      setState(() {
+        _markdownText = fileContent;
+      });
+    } catch (e) {
+      print('Fehler beim Laden der Datenschutzerklärung: $e');
+      setState(() {
+        _markdownText = 'Fehler beim Laden der Datenschutzerklärung.';
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMarkdown();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Expanded(
+              child: Markdown(
+                data: _markdownText,
+                shrinkWrap: true,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Schließen'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class FAQDialog extends StatefulWidget {
+  const FAQDialog({super.key});
+
+  @override
+  State<FAQDialog> createState() => _FAQDialogState();
+}
+
+class _FAQDialogState extends State<FAQDialog> {
+  List<Map<String, String>> _faqList = [];
+
+  Future<void> _loadFAQ() async {
+    try {
+      final content = await rootBundle.loadString('assets/faq.md');
+      final lines = content.split('\n');
+
+      List<Map<String, String>> faqs = [];
+      String? currentQuestion;
+      StringBuffer currentAnswer = StringBuffer();
+
+      for (var line in lines) {
+        if (line.startsWith('# ')) {
+          // Save previous FAQ
+          if (currentQuestion != null) {
+            faqs.add({
+              'question': currentQuestion.trim(),
+              'answer': currentAnswer.toString().trim(),
+            });
+            currentAnswer.clear();
+          }
+          currentQuestion = line.replaceFirst('# ', '');
+        } else {
+          currentAnswer.writeln(line);
+        }
+      }
+
+      // Add last entry
+      if (currentQuestion != null) {
+        faqs.add({
+          'question': currentQuestion.trim(),
+          'answer': currentAnswer.toString().trim(),
+        });
+      }
+
+      setState(() {
+        _faqList = faqs;
+      });
+    } catch (e) {
+      print('Fehler beim Laden des FAQ: $e');
+      setState(() {
+        _faqList = [
+          {
+            'question': 'Fehler',
+            'answer': 'FAQ konnte nicht geladen werden.',
+          }
+        ];
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFAQ();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.all(16.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: _faqList.isEmpty
+            ? const SizedBox(
+          height: 150,
+          child: Center(child: CircularProgressIndicator()),
+        )
+            : Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'FAQ',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _faqList.length,
+                itemBuilder: (context, index) {
+                  final faq = _faqList[index];
+                  return ExpansionTile(
+                    title: Text(
+                      faq['question'] ?? '',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
+                        child: Text(faq['answer'] ?? ''),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Schließen'),
+            ),
+          ],
+        ),
       ),
     );
   }

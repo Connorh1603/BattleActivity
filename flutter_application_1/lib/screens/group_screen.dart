@@ -1,6 +1,4 @@
-import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'imports.dart';
 import 'package:flutter_application_1/screens/group_detail_screen.dart';
 
 class GroupScreen extends StatelessWidget {
@@ -12,7 +10,87 @@ class GroupScreen extends StatelessWidget {
     final String userId = currentUser?.uid ?? 'Unbekannt';
 
     return Scaffold(
-      appBar: AppBar(title: Text('Gruppen')),
+      appBar: PreferredSize(
+  preferredSize: Size.fromHeight(70), // Höhe der AppBar erhöhen
+  child: Container(
+    decoration: BoxDecoration(
+      color: Color.fromARGB(255, 127, 179, 68), // Hintergrundfarbe Grün
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey[300] ?? Colors.grey, // Schattenfarbe
+          blurRadius: 5, // Schattenradius
+          offset: Offset(0, 2), // Schattenposition
+        ),
+      ],
+      borderRadius: BorderRadius.vertical(bottom: Radius.circular(10)), // Ecken der Navigationsleiste abrunden
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.arrow_back, size: 30, color: Colors.white), // Zurück-Button weiß
+              onPressed: () => Navigator.pop(context),
+            ),
+            Text('Zurück', style: TextStyle(fontSize: 20, color: Colors.white)), // Zurück-Text weiß
+          ],
+        ),
+        Expanded(
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/archievement'); // Navigiere zur Archivments-Seite
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                      foregroundColor: Colors.white, // Schriftfarbe Weiß
+                    ),
+                    child:
+                        Text('Erfolge', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/activity'); // Navigiere zur Aktivitäten-Seite
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                      foregroundColor: Colors.white, // Schriftfarbe Weiß
+                    ),
+                    child:
+                        Text('Aktivitäten', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                  ),
+                ],
+              ),
+              Positioned(
+                top: 0,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/profile'); // Navigiere zur Profil-Seite
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor:
+                        const Color.fromARGB(255, 100, 150, 60), // Hintergrundfarbe dunkleres Grün
+                    foregroundColor: Colors.white, // Schriftfarbe Weiß
+                  ),
+                  child:
+                      Text('Profil', style: TextStyle(fontSize: 20)), // Schriftgröße erhöhen
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  ),
+),
       body: FutureBuilder<DocumentSnapshot>(
         future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
         builder: (context, snapshot) {
@@ -63,20 +141,28 @@ class GroupScreen extends StatelessWidget {
                           final groupName = group['name'] ?? 'Unbekannte Gruppe';
                           final groupType = group['typ'] ?? 'Kein Typ';
 
-                          return ListTile(
-                            title: Text(groupName),
-                            subtitle: Text(groupType),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => GroupDetailScreen(
-                                    groupId: group.id,
-                                    username: username,
+                          return Card(
+                            elevation: 4,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                            child: ListTile(
+                              leading: const Icon(Icons.group, size: 32),
+                              title: Text(groupName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text(groupType),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => GroupDetailScreen(
+                                      groupId: group.id,
+                                      username: username,
+                                      userId: userId,
+                                    ),
                                   ),
-                                ),
-                              );
-                            },
+                                );
+                              },
+                            ),
                           );
                         },
                       );
@@ -88,6 +174,12 @@ class GroupScreen extends StatelessWidget {
                     _showCreateGroupDialog(context, userId);
                   },
                   child: Text('Gruppe erstellen'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    _showJoinGroupDialog(context, userId);
+                  },
+                  child: Text('Gruppe beitreten'),
                 ),
               ],
             ),
@@ -159,6 +251,50 @@ class GroupScreen extends StatelessWidget {
       },
     );
   }
+
+  void _showJoinGroupDialog(BuildContext context, String userId) {
+    final TextEditingController groupIdController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Gruppe beitreten"),
+          content: TextField(
+            controller: groupIdController,
+            decoration: InputDecoration(labelText: "Gruppen-ID"),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text("Abbrechen"),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final groupId = groupIdController.text.trim();
+                if (groupId.isNotEmpty) {
+                  final groupRef = FirebaseFirestore.instance.collection('Groups').doc(groupId);
+                  final groupSnap = await groupRef.get();
+
+                  if (groupSnap.exists) {
+                    await groupRef.update({
+                      'members': FieldValue.arrayUnion([userId]),
+                    });
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gruppe beigetreten.")));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Gruppe nicht gefunden.")));
+                  }
+                }
+              },
+              child: Text("Beitreten"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
 
   void _createGroup(String name, String type, String userId) {
     if (name.isEmpty || type.isEmpty) return;
