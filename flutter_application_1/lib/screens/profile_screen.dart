@@ -426,8 +426,16 @@ class SettingsDialog extends StatelessWidget {
               ),
               ListTile(title: Text('Help and Support')),
               ListTile(title: Text('Feedback')),
-              ListTile(title: Text('Frequently asked questions')),
               ListTile(
+                title: Text('FAQ'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (context) => const FAQDialog(),
+                  );
+                },
+              ),              ListTile(
                 title: Text('Terms of Use'),
                 onTap: () {
                   Navigator.of(context).pop();
@@ -717,6 +725,129 @@ class _PrivacyPolicyDialogState extends State<PrivacyPolicyDialog> {
               child: Markdown(
                 data: _markdownText,
                 shrinkWrap: true,
+              ),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Schließen'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class FAQDialog extends StatefulWidget {
+  const FAQDialog({super.key});
+
+  @override
+  State<FAQDialog> createState() => _FAQDialogState();
+}
+
+class _FAQDialogState extends State<FAQDialog> {
+  List<Map<String, String>> _faqList = [];
+
+  Future<void> _loadFAQ() async {
+    try {
+      final content = await rootBundle.loadString('assets/faq.md');
+      final lines = content.split('\n');
+
+      List<Map<String, String>> faqs = [];
+      String? currentQuestion;
+      StringBuffer currentAnswer = StringBuffer();
+
+      for (var line in lines) {
+        if (line.startsWith('# ')) {
+          // Save previous FAQ
+          if (currentQuestion != null) {
+            faqs.add({
+              'question': currentQuestion.trim(),
+              'answer': currentAnswer.toString().trim(),
+            });
+            currentAnswer.clear();
+          }
+          currentQuestion = line.replaceFirst('# ', '');
+        } else {
+          currentAnswer.writeln(line);
+        }
+      }
+
+      // Add last entry
+      if (currentQuestion != null) {
+        faqs.add({
+          'question': currentQuestion.trim(),
+          'answer': currentAnswer.toString().trim(),
+        });
+      }
+
+      setState(() {
+        _faqList = faqs;
+      });
+    } catch (e) {
+      print('Fehler beim Laden des FAQ: $e');
+      setState(() {
+        _faqList = [
+          {
+            'question': 'Fehler',
+            'answer': 'FAQ konnte nicht geladen werden.',
+          }
+        ];
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFAQ();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.all(16.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: _faqList.isEmpty
+            ? const SizedBox(
+          height: 150,
+          child: Center(child: CircularProgressIndicator()),
+        )
+            : Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'FAQ',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _faqList.length,
+                itemBuilder: (context, index) {
+                  final faq = _faqList[index];
+                  return ExpansionTile(
+                    title: Text(
+                      faq['question'] ?? '',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16.0,
+                          vertical: 8.0,
+                        ),
+                        child: Text(faq['answer'] ?? ''),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
             const SizedBox(height: 10),
