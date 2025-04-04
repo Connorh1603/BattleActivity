@@ -161,18 +161,31 @@ class GroupScreen extends StatelessWidget {
                     },
                   ),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    _showCreateGroupDialog(context, userId);
-                  },
-                  child: Text('Gruppe erstellen'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    _showJoinGroupDialog(context, userId);
-                  },
-                  child: Text('Gruppe beitreten'),
-                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        _showCreateGroupDialog(context, userId);
+                      },
+                      style: ElevatedButton.styleFrom(
+                            backgroundColor: Color.fromARGB(255, 100, 150, 60),
+                            foregroundColor: Colors.white,
+                          ),
+                      child: Text('Gruppe erstellen'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        _showJoinGroupDialog(context, userId);
+                      },
+                      style: ElevatedButton.styleFrom(
+                            backgroundColor: Color.fromARGB(255, 100, 150, 60),
+                            foregroundColor: Colors.white,
+                          ),
+                      child: Text('Gruppe beitreten'),
+                    ),
+                  ]
+                )
               ],
             ),
           );

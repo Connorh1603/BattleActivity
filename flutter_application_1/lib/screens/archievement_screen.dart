@@ -279,24 +279,6 @@ class _AchievementScreenState extends State {
                 },
               ),
             ),
-            const SizedBox(height: 10),
-            Column(
-              children: [
-                ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(context, '/profile'),
-                  child: const Text('Go to Profile'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(context, '/activity'),
-                  child: const Text('Aktivitäten'),
-                ),
-                ElevatedButton(
-                  onPressed: () => Navigator.pushNamed(context, '/group'),
-                  child: const Text('Gruppen'),
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
           ],
         ),
       ),

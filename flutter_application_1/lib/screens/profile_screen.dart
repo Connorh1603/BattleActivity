@@ -607,10 +607,20 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
                   border: OutlineInputBorder(),
                 ),
               ),
-              SizedBox(height: 10), // Abstand zwischen dem letzten Textfeld und dem Button
-              ElevatedButton(
-                onPressed: _updateProfile,
-                child: Text('Update'), // Button-Text auf "Update" geändert
+              SizedBox(height: 10), 
+              // Abstand zwischen dem letzten Textfeld und dem Button
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text('Abbrechen'),
+                  ),
+                  ElevatedButton(
+                    onPressed: _updateProfile,
+                    child: Text('Update'), // Button-Text auf "Update" geändert
+                  )
+                ]
               ),
             ],
           ),
