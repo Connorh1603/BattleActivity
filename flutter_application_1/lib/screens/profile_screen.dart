@@ -278,27 +278,81 @@ body: Column(
                             return Card(
                               elevation: 4,
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              child: ListTile(
-                                leading: imageUrl != null && imageUrl.isNotEmpty
-                                    ? Image.network(imageUrl, width: 50, height: 50, fit: BoxFit.cover)
-                                    : Container(
+                              child: Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    // Bild links
+                                    imageUrl != null && imageUrl.isNotEmpty
+                                        ? ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Image.network(
+                                        imageUrl,
                                         width: 50,
                                         height: 50,
-                                        color: Colors.grey[300],
-                                        child: const Icon(Icons.image, size: 24),
+                                        fit: BoxFit.cover,
                                       ),
-                                title: Text(activity.get('title'), style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)), // Schriftfarbe Schwarz
-                                subtitle: Text(activity.get('description'), style: TextStyle(color: Colors.black)), // Schriftfarbe Schwarz
-                                trailing: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      "Erstellt am: ${DateTime.fromMillisecondsSinceEpoch(activity.get('timestamp')).toString().split(' ').first}",
-                                      style: TextStyle(fontSize: 12, color: Colors.black), // Schriftfarbe Schwarz
+                                    )
+                                        : Container(
+                                      width: 50,
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[300],
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: const Icon(Icons.image, size: 24),
                                     ),
-                                    Text(
-                                      "Geändert am: ${DateTime.fromMillisecondsSinceEpoch(activity.get('updatedTimestamp') ?? activity.get('timestamp')).toString().split(' ').first}",
-                                      style: TextStyle(fontSize: 12, color: Colors.black), // Schriftfarbe Schwarz
+                                    const SizedBox(width: 12),
+
+                                    // Titel in der Mitte, Beschreibung unten
+                                    Expanded(
+                                      child: Container(
+                                        // Höhe = Bildhöhe, damit sich alles anpasst
+                                        height: 50,
+                                        child: Stack(
+                                          children: [
+                                            // Titel (zentriert in der Höhe)
+                                            Align(
+                                              alignment: Alignment.centerLeft,
+                                              child: Text(
+                                                activity.get('title'),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 16,
+                                                ),
+                                              ),
+                                            ),
+                                            // Beschreibung unten
+                                            Positioned(
+                                              bottom: 0,
+                                              left: 0,
+                                              child: Text(
+                                                activity.get('description'),
+                                                style: const TextStyle(color: Colors.black),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+
+                                    // Zeitangaben rechts
+                                    Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.end,
+                                      children: [
+                                        Text(
+                                          "Erstellt am: "
+                                              "${DateTime.fromMillisecondsSinceEpoch(activity.get('timestamp')).toString().split(' ').first}",
+                                          style: const TextStyle(fontSize: 12, color: Colors.black),
+                                        ),
+                                        Text(
+                                          "Geändert am: "
+                                              "${DateTime.fromMillisecondsSinceEpoch(activity.get('updatedTimestamp') ?? activity.get('timestamp')).toString().split(' ').first}",
+                                          style: const TextStyle(fontSize: 12, color: Colors.black),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
