@@ -560,26 +560,42 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
   }
 
   Future<void> _updateProfile() async {
-    try {
-      final FirebaseFirestore firestore = FirebaseFirestore.instance;
-      final User? user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await firestore.collection('users').doc(user.uid).update({
-          'username': _usernameController.text,
-          'firstName': _firstNameController.text,
-          'lastName': _lastNameController.text,
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Updated')),
-        );
-        Navigator.of(context).pop(); // Schließe das Fenster
-      }
-    } catch (e) {
+  try {
+    final String newUsername = _usernameController.text;
+    
+    if (newUsername.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed')),
+        SnackBar(content: Text('Bitte geben Sie einen Benutzernamen ein.')),
       );
+      return;
     }
+
+    if (await _checkIfUsernameExists(newUsername)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Dieser Benutzername ist bereits vergeben.')),
+      );
+      return;
+    }
+
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await firestore.collection('users').doc(user.uid).update({
+        'username': newUsername,
+        'firstName': _firstNameController.text,
+        'lastName': _lastNameController.text,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Profil erfolgreich aktualisiert.')),
+      );
+      Navigator.of(context).pop(); // Schließe das Fenster
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Fehler beim Aktualisieren des Profils: $e')),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -652,7 +668,7 @@ class _AboutDialogMarkdownState extends State<AboutDialogMarkdown> {
 
   Future<void> _loadMarkdown() async {
     try {
-      final fileContent = await rootBundle.loadString('about.md');
+      final fileContent = await rootBundle.loadString('assets/about.md');
       setState(() {
         _markdownText = fileContent;
       });
@@ -675,16 +691,22 @@ class _AboutDialogMarkdownState extends State<AboutDialogMarkdown> {
     return Dialog(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            MarkdownBody(data: _markdownText),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Schließen'),
-            ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Über BattleActivity',
+              ),
+              const SizedBox(height: 10),
+              MarkdownBody(data: _markdownText),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Schließen'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -704,7 +726,7 @@ class _TermsOfUseDialogState extends State<TermsOfUseDialog> {
 
   Future<void> _loadMarkdown() async {
     try {
-      final fileContent = await rootBundle.loadString('terms_of_use.md');
+      final fileContent = await rootBundle.loadString('assets/terms_of_use.md');
       setState(() {
         _markdownText = fileContent;
       });
@@ -727,21 +749,22 @@ class _TermsOfUseDialogState extends State<TermsOfUseDialog> {
     return Dialog(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Expanded(
-              child: Markdown(
-                data: _markdownText,
-                shrinkWrap: true,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Nutzungsbedingungen',
               ),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Schließen'),
-            ),
-          ],
+              const SizedBox(height: 10),
+              MarkdownBody(data: _markdownText),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Schließen'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -761,7 +784,8 @@ class _PrivacyPolicyDialogState extends State<PrivacyPolicyDialog> {
 
   Future<void> _loadMarkdown() async {
     try {
-      final fileContent = await rootBundle.loadString('privacy_policy.md');
+      final fileContent =
+          await rootBundle.loadString('assets/privacy_policy.md');
       setState(() {
         _markdownText = fileContent;
       });
@@ -784,21 +808,22 @@ class _PrivacyPolicyDialogState extends State<PrivacyPolicyDialog> {
     return Dialog(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Expanded(
-              child: Markdown(
-                data: _markdownText,
-                shrinkWrap: true,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Datenschutzerklärung',
               ),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Schließen'),
-            ),
-          ],
+              const SizedBox(height: 10),
+              MarkdownBody(data: _markdownText),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Schließen'),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1016,4 +1041,23 @@ class _FeedbackDialogState extends State<FeedbackDialog> {
       ],
     );
   }
+}
+
+//Benutzername-Überprüfung
+// Überprüft, ob der Benutzername bereits existiert
+Future<bool> _checkIfUsernameExists(String username) async {
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final QuerySnapshot querySnapshot = await firestore.collection('users').get();
+  final List existingUsernames = querySnapshot.docs.map((doc) => doc.get('username')).map((e) => e as String).toList();
+  
+  // Überprüfe, ob der neue Benutzername bereits existiert und nicht der aktuelle Benutzername ist
+  final User? user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final DocumentSnapshot doc = await firestore.collection('users').doc(user.uid).get();
+    final currentUsername = doc.get('username');
+    
+    return existingUsernames.contains(username) && username != currentUsername;
+  }
+  
+  return existingUsernames.contains(username);
 }
