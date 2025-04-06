@@ -408,7 +408,7 @@ body: Column(
                                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black), // Schriftfarbe Schwarz
                                     ),
                                     Image.asset(
-                                      '${achievement['badge'].toLowerCase()}.png',
+                                      'assets/${achievement['badge'].toLowerCase()}.png',
                                       width: 50,
                                       height: 50,
                                     ),
