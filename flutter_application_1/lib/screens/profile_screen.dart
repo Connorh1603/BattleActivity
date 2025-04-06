@@ -1,4 +1,5 @@
 import 'imports.dart';
+import 'package:cloud_functions/cloud_functions.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -437,7 +438,6 @@ body: Column(
 }
 }
 
-//Dialogfenster für Einstellungen
 class SettingsDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -466,12 +466,21 @@ class SettingsDialog extends StatelessWidget {
                   Navigator.of(context).pop();
                   showDialog(
                     context: context,
-                    builder: (context) => const AboutDialogMarkdown(),
+                    builder: (context) => const AboutDialog(),
                   );
                 },
               ),
               ListTile(title: Text('Help and Support')),
-              ListTile(title: Text('Feedback')),
+              ListTile(
+                title: Text('Feedback'),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  showDialog(
+                    context: context,
+                    builder: (context) => FeedbackDialog(),
+                  );
+                },
+              ),
               ListTile(
                 title: Text('FAQ'),
                 onTap: () {
@@ -551,26 +560,42 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
   }
 
   Future<void> _updateProfile() async {
-    try {
-      final FirebaseFirestore firestore = FirebaseFirestore.instance;
-      final User? user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        await firestore.collection('users').doc(user.uid).update({
-          'username': _usernameController.text,
-          'firstName': _firstNameController.text,
-          'lastName': _lastNameController.text,
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Updated')),
-        );
-        Navigator.of(context).pop(); // Schließe das Fenster
-      }
-    } catch (e) {
+  try {
+    final String newUsername = _usernameController.text;
+    
+    if (newUsername.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed')),
+        SnackBar(content: Text('Bitte geben Sie einen Benutzernamen ein.')),
       );
+      return;
     }
+
+    if (await _checkIfUsernameExists(newUsername)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Dieser Benutzername ist bereits vergeben.')),
+      );
+      return;
+    }
+
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await firestore.collection('users').doc(user.uid).update({
+        'username': _usernameController.text,
+        'firstName': _firstNameController.text,
+        'lastName': _lastNameController.text,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Profil erfolgreich aktualisiert.')),
+      );
+      Navigator.of(context).pop(); // Schließe das Fenster
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Fehler beim Aktualisieren des Profils: $e')),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -643,7 +668,7 @@ class _AboutDialogMarkdownState extends State<AboutDialogMarkdown> {
 
   Future<void> _loadMarkdown() async {
     try {
-      final fileContent = await rootBundle.loadString('about.md');
+      final fileContent = await rootBundle.loadString('assets/about.md');
       setState(() {
         _markdownText = fileContent;
       });
@@ -666,80 +691,29 @@ class _AboutDialogMarkdownState extends State<AboutDialogMarkdown> {
     return Dialog(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            MarkdownBody(data: _markdownText),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Schließen'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// Terms of Use Dialog
-class TermsOfUseDialog extends StatefulWidget {
-  const TermsOfUseDialog({super.key});
-
-  @override
-  State<TermsOfUseDialog> createState() => _TermsOfUseDialogState();
-}
-
-class _TermsOfUseDialogState extends State<TermsOfUseDialog> {
-  String _markdownText = '';
-
-  Future<void> _loadMarkdown() async {
-    try {
-      final fileContent = await rootBundle.loadString('terms_of_use.md');
-      setState(() {
-        _markdownText = fileContent;
-      });
-    } catch (e) {
-      print('Fehler beim Laden der Nutzungsbedingungen: $e');
-      setState(() {
-        _markdownText = 'Fehler beim Laden der Nutzungsbedingungen.';
-      });
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMarkdown();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Expanded(
-              child: Markdown(
-                data: _markdownText,
-                shrinkWrap: true,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Über BattleActivity',
               ),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Schließen'),
-            ),
-          ],
+              const SizedBox(height: 10),
+              MarkdownBody(data: _markdownText),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Schließen'),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// Privacy Policy Dialog
+//Datenschutzerklärung Dialog
 class PrivacyPolicyDialog extends StatefulWidget {
   const PrivacyPolicyDialog({super.key});
 
@@ -752,7 +726,8 @@ class _PrivacyPolicyDialogState extends State<PrivacyPolicyDialog> {
 
   Future<void> _loadMarkdown() async {
     try {
-      final fileContent = await rootBundle.loadString('privacy_policy.md');
+      final fileContent =
+          await rootBundle.loadString('assets/privacy_policy.md');
       setState(() {
         _markdownText = fileContent;
       });
@@ -775,27 +750,87 @@ class _PrivacyPolicyDialogState extends State<PrivacyPolicyDialog> {
     return Dialog(
       child: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Expanded(
-              child: Markdown(
-                data: _markdownText,
-                shrinkWrap: true,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Datenschutzerklärung',
               ),
-            ),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Schließen'),
-            ),
-          ],
+              const SizedBox(height: 10),
+              MarkdownBody(data: _markdownText),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Schließen'),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
+// Nutzungsbedingungen Dialog
+class TermsOfUseDialog extends StatefulWidget {
+  const TermsOfUseDialog({super.key});
+
+  @override
+  State<TermsOfUseDialog> createState() => _TermsOfUseDialogState();
+}
+
+class _TermsOfUseDialogState extends State<TermsOfUseDialog> {
+  String _markdownText = '';
+
+  Future<void> _loadMarkdown() async {
+    try {
+      final fileContent = await rootBundle.loadString('assets/terms_of_use.md');
+      setState(() {
+        _markdownText = fileContent;
+      });
+    } catch (e) {
+      print('Fehler beim Laden der Nutzungsbedingungen: $e');
+      setState(() {
+        _markdownText = 'Fehler beim Laden der Nutzungsbedingungen.';
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMarkdown();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Nutzungsbedingungen',
+              ),
+              const SizedBox(height: 10),
+              MarkdownBody(data: _markdownText),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Schließen'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+//FAQ Dialog
 class FAQDialog extends StatefulWidget {
   const FAQDialog({super.key});
 
@@ -917,4 +952,113 @@ class _FAQDialogState extends State<FAQDialog> {
       ),
     );
   }
+}
+
+class FeedbackDialog extends StatefulWidget {
+  @override
+  _FeedbackDialogState createState() => _FeedbackDialogState();
+}
+
+class _FeedbackDialogState extends State<FeedbackDialog> {
+  final _subjectController = TextEditingController();
+  final _messageController = TextEditingController();
+  final _userNameController = TextEditingController();
+  final _userEmailController = TextEditingController();
+  String _userName = '';
+  String _userEmail = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      setState(() {
+        _userName = '${doc['firstName']} ${doc['lastName']}';
+        _userEmail = doc['email'];
+        _userNameController.text = _userName;
+        _userEmailController.text = _userEmail;
+      });
+    }
+  }
+
+  Future<void> _sendFeedback() async {
+    try {
+      final callable = FirebaseFunctions.instance.httpsCallable('sendemail');
+      await callable.call({
+        'name': _userNameController.text,
+        'email': _userEmailController.text,
+        'subject': _subjectController.text,
+        'message': _messageController.text,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Feedback erfolgreich gesendet!')),
+      );
+      Navigator.of(context).pop();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Fehler beim Senden des Feedbacks')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: Text('Feedback senden'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _userNameController,
+            decoration: InputDecoration(labelText: 'Name'),
+            readOnly: true, // Optional, falls nicht editierbar sein soll
+          ),
+          TextField(
+            controller: _userEmailController,
+            decoration: InputDecoration(labelText: 'E-Mail'),
+            readOnly: true, // Optional, falls nicht editierbar sein soll
+          ),
+          TextField(
+            controller: _subjectController,
+            decoration: InputDecoration(labelText: 'Betreff'),
+            maxLength: 50,
+          ),
+          TextField(
+            controller: _messageController,
+            decoration: InputDecoration(labelText: 'Nachricht'),
+            maxLines: 5,
+            maxLength: 500,
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(onPressed: () => Navigator.of(context).pop(), child: Text('Abbrechen')),
+        ElevatedButton(onPressed: _sendFeedback, child: Text('Absenden')),
+      ],
+    );
+  }
+}
+
+//Benutzername-Überprüfung
+// Überprüft, ob der Benutzername bereits existiert
+Future<bool> _checkIfUsernameExists(String username) async {
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
+  final QuerySnapshot querySnapshot = await firestore.collection('users').get();
+  final List existingUsernames = querySnapshot.docs.map((doc) => doc.get('username')).map((e) => e as String).toList();
+  
+  // Überprüfe, ob der neue Benutzername bereits existiert und nicht der aktuelle Benutzername ist
+  final User? user = FirebaseAuth.instance.currentUser;
+  if (user != null) {
+    final DocumentSnapshot doc = await firestore.collection('users').doc(user.uid).get();
+    final currentUsername = doc.get('username');
+    
+    return existingUsernames.contains(username) && username != currentUsername;
+  }
+  
+  return existingUsernames.contains(username);
 }

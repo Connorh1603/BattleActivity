@@ -1,0 +1,24 @@
+{
+    "name": "functions",
+    "version": "1.0.0",
+    "description": "Cloud Functions for Firebase",
+    "scripts": {
+      "lint": "eslint ."
+    },
+    "main": "index.js",
+    "engines": {
+      "node": "22"
+    },
+    "dependencies": {
+      "firebase-functions": "^5.0.0",
+      "firebase-admin": "^12.0.0",
+      "nodemailer": "^6.9.3"
+    },
+    "devDependencies": {
+      "eslint": "^8.57.0",
+      "eslint-config-airbnb-base": "^15.0.0",
+      "eslint-plugin-import": "^2.29.1"
+    },
+    "private": true
+  }
+  

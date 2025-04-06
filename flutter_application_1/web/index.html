@@ -14,7 +14,7 @@
     This is a placeholder for base href that will be replaced by the value of
     the `--base-href` argument provided to `flutter build`.
   -->
-  <base href="$FLUTTER_BASE_HREF">
+  <base href="/">
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
@@ -32,10 +32,76 @@
   <!-- Google Sign-In Client-ID -->
   <meta name="google-signin-client_id" content="712873519787-2haf5r93a82upjh2q34h1che81fgflsv.apps.googleusercontent.com">
 
+  <!-- Firebase Configuration -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-functions.js"></script>
+
   <title>flutter_application_1</title>
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <!-- Feedback Form -->
+  <div id="feedbackForm" style="display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; box-shadow: 0px 4px 6px rgba(0,0,0,0.1);">
+    <h3>Feedback geben</h3>
+    <form id="feedbackFormContent">
+      <label for="email">E-Mail:</label><br>
+      <input type="email" id="email" name="email"><br><br>
+
+      <label for="subject">Betreff:</label><br>
+      <input type="text" id="subject" name="subject"><br><br>
+
+      <label for="message">Nachricht:</label><br>
+      <textarea id="message" name="message"></textarea><br><br>
+
+      <button type="button" onclick="sendFeedback()">Abschicken</button>
+      <button type="button" onclick="closeFeedbackForm()">Schließen</button>
+    </form>
+  </div>
+
+  <!-- Flutter Bootstrap -->
   <script src="flutter_bootstrap.js" async></script>
+
+  <!-- Firebase Initialization -->
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCU0I96O0uKLnrdVwYeZyBRsDtV3wayv9w",
+      authDomain: "battle-activity.firebaseapp.com",
+      projectId: "battle-activity",
+      storageBucket: "battle-activity.appspot.com",
+      messagingSenderId: "712873519787",
+      appId: "1:712873519787:web:8a9f05531da54e2064e5ee"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+
+    const functions = firebase.functions();
+
+    function openFeedbackForm() {
+      document.getElementById('feedbackForm').style.display = 'block';
+    }
+
+    function closeFeedbackForm() {
+      document.getElementById('feedbackForm').style.display = 'none';
+    }
+
+    async function sendFeedback() {
+      const email = document.getElementById('email').value;
+      const subject = document.getElementById('subject').value;
+      const message = document.getElementById('message').value;
+
+      try {
+        const sendEmail = functions.httpsCallable('sendemail');
+        await sendEmail({ email, subject, message });
+        alert('Feedback erfolgreich gesendet!');
+        closeFeedbackForm();
+      } catch (error) {
+        console.error('Fehler beim Senden des Feedbacks:', error);
+        alert('Fehler beim Senden des Feedbacks.');
+      }
+    }
+  </script>
 </body>
 </html>
