@@ -267,8 +267,7 @@ class _AchievementScreenState extends State {
                             ),
                           ),
                           const SizedBox(width: 12),
-                          Image.asset(
-                            '${achievement.badge}.png',
+                          Image.asset('assets/${achievement.badge}.png',
                             width: 80,
                             height: 80,
                           ),
