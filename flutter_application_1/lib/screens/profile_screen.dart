@@ -466,7 +466,7 @@ class SettingsDialog extends StatelessWidget {
                   Navigator.of(context).pop();
                   showDialog(
                     context: context,
-                    builder: (context) => const AboutDialogMarkdown(),
+                    builder: (context) => const AboutDialog(),
                   );
                 },
               ),
@@ -581,7 +581,7 @@ class _ChangeProfileDialogState extends State<ChangeProfileDialog> {
     final User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       await firestore.collection('users').doc(user.uid).update({
-        'username': newUsername,
+        'username': _usernameController.text,
         'firstName': _firstNameController.text,
         'lastName': _lastNameController.text,
       });
@@ -713,65 +713,7 @@ class _AboutDialogMarkdownState extends State<AboutDialogMarkdown> {
   }
 }
 
-// Terms of Use Dialog
-class TermsOfUseDialog extends StatefulWidget {
-  const TermsOfUseDialog({super.key});
-
-  @override
-  State<TermsOfUseDialog> createState() => _TermsOfUseDialogState();
-}
-
-class _TermsOfUseDialogState extends State<TermsOfUseDialog> {
-  String _markdownText = '';
-
-  Future<void> _loadMarkdown() async {
-    try {
-      final fileContent = await rootBundle.loadString('assets/terms_of_use.md');
-      setState(() {
-        _markdownText = fileContent;
-      });
-    } catch (e) {
-      print('Fehler beim Laden der Nutzungsbedingungen: $e');
-      setState(() {
-        _markdownText = 'Fehler beim Laden der Nutzungsbedingungen.';
-      });
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _loadMarkdown();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Dialog(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Nutzungsbedingungen',
-              ),
-              const SizedBox(height: 10),
-              MarkdownBody(data: _markdownText),
-              const SizedBox(height: 10),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Schließen'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// Privacy Policy Dialog
+//Datenschutzerklärung Dialog
 class PrivacyPolicyDialog extends StatefulWidget {
   const PrivacyPolicyDialog({super.key});
 
@@ -830,6 +772,65 @@ class _PrivacyPolicyDialogState extends State<PrivacyPolicyDialog> {
   }
 }
 
+// Nutzungsbedingungen Dialog
+class TermsOfUseDialog extends StatefulWidget {
+  const TermsOfUseDialog({super.key});
+
+  @override
+  State<TermsOfUseDialog> createState() => _TermsOfUseDialogState();
+}
+
+class _TermsOfUseDialogState extends State<TermsOfUseDialog> {
+  String _markdownText = '';
+
+  Future<void> _loadMarkdown() async {
+    try {
+      final fileContent = await rootBundle.loadString('assets/terms_of_use.md');
+      setState(() {
+        _markdownText = fileContent;
+      });
+    } catch (e) {
+      print('Fehler beim Laden der Nutzungsbedingungen: $e');
+      setState(() {
+        _markdownText = 'Fehler beim Laden der Nutzungsbedingungen.';
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMarkdown();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Nutzungsbedingungen',
+              ),
+              const SizedBox(height: 10),
+              MarkdownBody(data: _markdownText),
+              const SizedBox(height: 10),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Schließen'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+//FAQ Dialog
 class FAQDialog extends StatefulWidget {
   const FAQDialog({super.key});
 
